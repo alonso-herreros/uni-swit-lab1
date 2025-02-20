@@ -1,3 +1,4 @@
 Trie compress_trie(trie) {
- This is my first change in the code
+    This is my first change in the code
+    
 }
