@@ -1,4 +1,6 @@
 Tree create_trie(r.txt) {
     1. The first step is to convert the IP adresess to binary.
-    2. 
+    2. The second step is to use an organization algorithm based on comparisons, for example, quicksort
+    3. Construction of the LC-trie from upper part to the bottom
+    4. 
 }
