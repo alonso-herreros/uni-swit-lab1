@@ -1,14 +1,46 @@
-typedef struct Trie {
-    int data_binary;
-    struct Trie* left;
-    struct Trie* right;
+//Defining the node structure
+struct TrieNode {
+    int data_binary; //IP binary coded
+    int end; //It indicates if it is the end of a CIDR prefix
+    struct TrieNode *children[1]; //0 or 1
 }
 
-Trie create_trie(r.txt) {
-    1. The first step is to convert the IP adresess to binary.
-    void decimal_a_binario
-    2. The second step is to use an organization algorithm based on comparisons, for example, by using 
-    quicksort algorithms
-    3. Construction of the LC-trie from upper part to the bottom
-    4. 
+//Creating a TrieNode
+TrieNode* create_Node() {
+    Initializing Trie* 0 and Trie *1 to NULL;
+    end = 0;
+    data_binary = -1;
+    Return the node;
+}
+
+//Function to insert an IP direction to the trie
+void insert (TrieNode* root, string cidr, int data_decimal){
+    //Converting the IP to binary
+    int ip_binary = convert_to_binary(data_decimal);
+    //Create an auxiliary node;
+    TrieNode* aux = root;
+    //obtaining the prefix
+    int prefix = to_number(cidr);
+
+    for (int i=0; i<prefix; i++){
+        int bit = ip_binary[i];
+
+        if(aux->children[bit]==NULL){ //We have reached an empty node
+            actual->hijos[bit] = create_Node();
+        }
+        aux = aux->hijos[bit]; //We move in the trie
+    }
+}
+
+//Creating a trie from the r.txt file
+TrieNode* create_trie(r.txt) {
+    Creating a root node with CreateNode();
+
+    Open r.txt
+    While text is not empty:
+        Read line
+        Extract data in decimal and CIDR direction
+        Insert the node
+    Close the file
+    Return the root of the trie;
 }
