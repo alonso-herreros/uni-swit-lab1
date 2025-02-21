@@ -1,7 +1,7 @@
 //Defining the node structure
 struct TrieNode {
-    int data_binary; //IP binary coded
-    int end; //It indicates if it is the end of a CIDR prefix
+    uint_32t data_binary; //IP binary coded
+    int prefixLength; //It indicates if it is the end of a CIDR prefix
     struct TrieNode *children[1]; //0 or 1
 }
 
@@ -14,7 +14,8 @@ TrieNode* create_Node() {
 }
 
 //Function to insert an IP direction to the trie
-void insert (TrieNode* root, string cidr, int data_decimal){
+TrieNode* insert (TrieNode* root, string cidr, int data_decimal){//It's better to use a variable
+ such as uint_32t for data_decimal
     //Converting the IP to binary
     int ip_binary = convert_to_binary(data_decimal);
     //Create an auxiliary node;
@@ -28,6 +29,7 @@ void insert (TrieNode* root, string cidr, int data_decimal){
         if(aux->children[bit]==NULL){ //We have reached an empty node
             actual->hijos[bit] = create_Node();
         }
+        if(aux->)
         aux = aux->hijos[bit]; //We move in the trie
     }
 }
