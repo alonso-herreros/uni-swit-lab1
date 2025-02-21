@@ -1,5 +1,12 @@
-Tree create_trie(r.txt) {
+typedef struct Trie {
+    int data_binary;
+    struct Trie* left;
+    struct Trie* right;
+}
+
+Trie create_trie(r.txt) {
     1. The first step is to convert the IP adresess to binary.
+    void decimal_a_binario
     2. The second step is to use an organization algorithm based on comparisons, for example, by using 
     quicksort algorithms
     3. Construction of the LC-trie from upper part to the bottom
