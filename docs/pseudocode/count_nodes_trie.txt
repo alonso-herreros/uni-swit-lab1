@@ -1,3 +1,8 @@
-int count_nodes_trie(trie) {
-
+int count_nodes_trie(TrieNode* node) {
+    if (node == NULL){
+        return 0;
+    }
+    else{
+        return 1 + count_nodes_trie(node->children[0]) + count_nodes_trie(node->children[1]);
+    }
 }
