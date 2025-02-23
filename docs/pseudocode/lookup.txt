@@ -34,9 +34,17 @@ int lookup(ip_addr, trie) {
     //
     // As per the lab specs, the next hop is not specified
 
-    if ()
-    match = *node.pointer;
-    
+    match = node.pointer;
+
+    // Since we have skipped bits, we need to check the prefix
+    if (check_prefix(ip_addr, match.prefix, match_prefix_len)) {
+        return match.out_port;
+    }
+    else {
+        // If there's no actual match, we should return the default port,
+        // wherever that may be
+        return default_port;
+    }
 }
 
 int check_prefix(ip_addr, target, prefix_len) {
