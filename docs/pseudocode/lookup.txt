@@ -14,11 +14,11 @@ int lookup(ip_addr, trie) {
     pointer = node.pointer;  // Pointer to the next node
 
     // Each loop advances 1 node and reads its info
-    while (read_bits != 0) {
+    while (read_bits != 0) { // This field is 0 at leaf nodes
         // Get the node at the next position
         node = trie[pointer + extract(bit_pos, read_bits, ip_addr)];
 
-        // Update the bit position to start reading next time
+        // Update the bit position to start reading at next time
         bit_pos += read_bits + node.skip;
 
         // Read info from node
@@ -31,6 +31,8 @@ int lookup(ip_addr, trie) {
     //     prefix_len: the length of the prefix to check
     //     prefix:     the prefix. Bits beyond prefix_len are don't cares
     //     out_port:   outgoing port
+    //
+    // As per the lab specs, the next hop is not specified
 
     if ()
     match = *node.pointer;
