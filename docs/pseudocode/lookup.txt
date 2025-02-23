@@ -16,7 +16,7 @@ int lookup(ip_addr, trie) {
     // Each loop advances 1 node and reads its info
     while (read_bits != 0) { // This field is 0 at leaf nodes
         // Get the node at the next position
-        node = trie[pointer + extract(bit_pos, read_bits, ip_addr)];
+        node = trie[pointer + extract(ip_addr, bit_pos, read_bits)];
 
         // Update the bit position to start reading at next time
         bit_pos += read_bits + node.skip;
@@ -46,7 +46,7 @@ int check_prefix(ip_addr, target, prefix_len) {
     return ip_prefix == target_prefix;
 }
 
-int extract(start_pos, n_bits, bitstring) {
+int extract(bitstring, start_pos, n_bits) {
     // Returns n_bits bits from bitstring starting at start_pos
 }
 
