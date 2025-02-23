@@ -1,3 +1,53 @@
 int lookup(ip_addr, trie) {
+    // The trie is an array of nodes. Each node has:
+    //     branch:  the number of bits to read to determine the branch to follow
+    //     skip:    the number of bits to skip when reading
+    //     pointer: the pointer to the node's leftmost child
 
+    // Starting at the root
+    node = trie[0];
+
+    // Initial position to start reading
+    bit_pos = node.skip;
+
+    read_bits = node.branch; // Number of bits to read
+    pointer = node.pointer;  // Pointer to the next node
+
+    // Each loop advances 1 node and reads its info
+    while (read_bits != 0) {
+        // Get the node at the next position
+        node = trie[pointer + extract(bit_pos, read_bits, ip_addr)];
+
+        // Update the bit position to start reading next time
+        bit_pos += read_bits + node.skip;
+
+        // Read info from node
+        read_bits = node.branch;
+        pointer = node.pointer;
+    }
+
+    // We are have arrived at a leaf. It should point to a structure that
+    // contains:
+    //     prefix_len: the length of the prefix to check
+    //     prefix:     the prefix. Bits beyond prefix_len are don't cares
+    //     out_port:   outgoing port
+
+    if ()
+    match = *node.pointer;
+    
+}
+
+int check_prefix(ip_addr, target, prefix_len) {
+    ip_prefix = get_prefix(ip_addr, prefix_len);
+    target_prefix = get_prefix(target, prefix_len)
+
+    return ip_prefix == target_prefix;
+}
+
+int extract(start_pos, n_bits, bitstring) {
+    // Returns n_bits bits from bitstring starting at start_pos
+}
+
+int get_prefix(address, prefix_len) {
+    // Returns the prefix_len first bits from address
 }
