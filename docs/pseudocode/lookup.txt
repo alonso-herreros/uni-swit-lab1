@@ -41,7 +41,7 @@ int lookup(ip_addr, trie) {
 
 int check_prefix(ip_addr, target, prefix_len) {
     ip_prefix = get_prefix(ip_addr, prefix_len);
-    target_prefix = get_prefix(target, prefix_len)
+    target_prefix = get_prefix(target, prefix_len);
 
     return ip_prefix == target_prefix;
 }
