@@ -50,6 +50,6 @@ int extract(bitstring, start_pos, n_bits) {
     // Returns n_bits bits from bitstring starting at start_pos
 }
 
-int get_prefix(address, prefix_len) {
-    // Returns the prefix_len first bits from address
+int get_prefix(bitstring, prefix_len) {
+    // Returns the prefix_len first bits from bitstring
 }
