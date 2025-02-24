@@ -1,4 +1,4 @@
-/** Given a trie, return a compressed version
+/** Given a trie, return a compressed version.
  *
  *  Compresses the plain binary trie returned by `create_trie`
  *
