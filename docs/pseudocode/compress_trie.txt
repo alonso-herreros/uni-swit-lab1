@@ -36,18 +36,21 @@ LCTNode compress_trie(trie, fill_factor, root_branching_factor) {
 
 /** Given a sorted base vector and a range, get an LC-Trie node covering it.
  *
- *  Allocates memory for a node and stores the required information. If size is
- *  1, the node is a leaf node, otherwise it's an intermediate node. Returns
- *  the node.
+ *  Stores the required information in the given memory space, which must have
+ *  been properly allocated. If size is 1, the node is a leaf node, otherwise
+ *  it's an intermediate node.
  *
  *  @param base the base vector, a sorted array of Actions
  *  @param first the index in the base vector where the group starts. Inclusive.
  *  @param size the number of (contiguous) elements from the base vector that
  *      belong to this group.
+ *  @param node the pointer to memory where this node shall be placed. Must
+ *      be pre-allocated.
  *
- *  @return The address of the memory-allocated node covering the given group.
+ *  @return The address of the node covering the given group. Same as the
+ *      address given in `node`.
  */
-LCTNode *compress_group(Action *base, int first, int size){
+LCTNode *compress_group(Action *base, int first, int size, LCTNode *node) {
     //  0. If the current group has only one address, create a **leaf node**
     //     with the skip value and branching factor set to 0. Set the
     //     `pointer` to the memory location of the action. Skip the rest of the
