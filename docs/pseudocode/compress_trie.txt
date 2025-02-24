@@ -8,6 +8,8 @@
  *  @param root_branching_factor the branching factor to apply to the root.
  *      If unset, the fill factor applies.
  *
+ *  @return the memory address of the root node
+ *
  *  @see https://dl.acm.org/doi/10.1109/49.772439 for details
  */
 LCTNode compress_trie(trie, fill_factor, root_branching_factor) {
