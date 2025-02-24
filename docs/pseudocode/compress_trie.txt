@@ -12,9 +12,45 @@
  */
 Trie compress_trie(trie, fill_factor, root_branching_factor) {
     //  1. Build and sort the **base vector**. We might want to use quick sort.
-    //     Check https://www.geeksforgeeks.org/quick-sort-in-c/.
-    //  2. Iterate for each group. First group is **all nodes**.
+    //     Check https://www.geeksforgeeks.org/quick-sort-in-c/. Keep in mind
+    //     that this is difficult to expand once the memory is allocated, so
+    //     we might want to reserve extra space. Otherwise, we'd need to
+    //     re-build the whole thing each time we wanted to expand the trie.
+    //  2. Allocate memory for the root.
+    //  3. Iterate for each group untill all nodes are covered. The first group
+    //     is **all nodes**.
+    //      0. If the current group has only one address, create a **leaf node**
+    //         with the skip value and branching factor set to 0. Set the
+    //         pointer to the index of the current address in the *base vector*.
+    //         Skip the rest of the iteration
     //      1. Determine the length of the shared prefix. This can be done by
     //         comparing the first and last nodes of the group, since the base
-    //         vector is sorted. This length is the **skip value**.
+    //         vector is sorted. This length is the **skip value**, `p`.
+    //      2. Determine the branching factor. This is done by checking, for
+    //         each possible branching factor `b` starting at 2, how many of the
+    //         2^b prefixes of length `b` are present in the current group,
+    //         disregarding the common prefix determined by the skip value. If
+    //         the ratio of present prefixes to total possible prefixes for a
+    //         branching factor `b` is *greater than the fill factor*, it's
+    //         considered populated enough, and the next branching factor is
+    //         checked. If the ratio is *smaller than the fill factor*, it's
+    //         considered too sparse, and the previous branching factor is
+    //         applied.
+    //      3. Create an **intermediate node**
+    //      4. Set the corresponding skip value `p` and branching factor
+    //         `b`.
+    //      5. Reserve contiguous memory for `2^b` child nodes, and store
+    //         the pointer of the first address in this block in the `pointer`
+    //         field.
+    //      6. Given the length of the common prefix `p` and branching factor
+    //         `b`, the current group can be subdivided into `b` new groups with
+    //         a shared prefix of length `p + b`. Repeat the subroutine on each
+    //         created subgroup, placing the resulting leaf or intermediate
+    //         node in the reserved memory space, in branch bits order (meaning,
+    //         the first node in the memory space is the one starting with `b`
+    //         zeroes, and the last node is the one starting with `b` ones). In
+    //         the case of a `b`-bit prefix group not having any members, run
+    //         the subroutine with a group which only has the default action for
+    //         the current group (prefix matching all members), if there is one,
+    //         or the default action otherwise.
 }
