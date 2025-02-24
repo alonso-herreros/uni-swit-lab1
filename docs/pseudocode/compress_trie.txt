@@ -10,7 +10,7 @@
  *
  *  @see https://dl.acm.org/doi/10.1109/49.772439 for details
  */
-Trie compress_trie(trie, fill_factor, root_branching_factor) {
+LCTNode compress_trie(trie, fill_factor, root_branching_factor) {
     //  1. Build and sort the **base vector**. We might want to use quick sort.
     //     Check https://www.geeksforgeeks.org/quick-sort-in-c/. Keep in mind
     //     that this is difficult to expand once the memory is allocated, so
@@ -19,6 +19,22 @@ Trie compress_trie(trie, fill_factor, root_branching_factor) {
     //  2. Allocate memory for the root.
     //  3. Recurse for each group untill all nodes are covered. The first group
     //     is **all nodes**.
+}
+
+/** Given a sorted base vector and a range, get an LC-Trie node covering it.
+ *
+ *  Allocates memory for a node and stores the required information. If size is
+ *  1, the node is a leaf node, otherwise it's an intermediate node. Returns
+ *  the node.
+ *
+ *  @param base the base vector, a sorted array of Actions
+ *  @param first the index in the base vector where the group starts. Inclusive.
+ *  @param size the number of (contiguous) elements from the base vector that
+ *      belong to this group.
+ *
+ *  @return The address of the memory-allocated node covering the given group.
+ */
+LCTNode *compress_group(Action *base, int first, int size){
     //      0. If the current group has only one address, create a **leaf node**
     //         with the skip value and branching factor set to 0. Set the
     //         pointer to the index of the current address in the *base vector*.
