@@ -11,10 +11,10 @@
  *  @see https://dl.acm.org/doi/10.1109/49.772439 for details
  */
 Trie compress_trie(trie, fill_factor, root_branching_factor) {
-    // 1. Build and sort the **base vector**. We might want to use quick sort.
-    //    Check https://www.geeksforgeeks.org/quick-sort-in-c/.
-    // 2. Iterate for each group. First group is **all nodes**.
-    //     1. Determine the length of the shared prefix. This can be done by
-    //        comparing the first and last nodes of the group, since the base
-    //        vector is sorted. This length is the **skip value**.
+    //  1. Build and sort the **base vector**. We might want to use quick sort.
+    //     Check https://www.geeksforgeeks.org/quick-sort-in-c/.
+    //  2. Iterate for each group. First group is **all nodes**.
+    //      1. Determine the length of the shared prefix. This can be done by
+    //         comparing the first and last nodes of the group, since the base
+    //         vector is sorted. This length is the **skip value**.
 }
