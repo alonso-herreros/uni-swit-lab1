@@ -50,8 +50,8 @@ LCTNode compress_trie(trie, fill_factor, root_branching_factor) {
 LCTNode *compress_group(Action *base, int first, int size){
     //  0. If the current group has only one address, create a **leaf node**
     //     with the skip value and branching factor set to 0. Set the
-    //     pointer to the index of the current address in the *base vector*.
-    //     Skip the rest of the iteration
+    //     `pointer` to the memory location of the action. Skip the rest of the
+    //     iteration.
     //  1. Determine the length of the shared prefix. This can be done by
     //     comparing the first and last nodes of the group, since the base
     //     vector is sorted. This length is the **skip value**, `p`.
@@ -69,7 +69,7 @@ LCTNode *compress_group(Action *base, int first, int size){
     //  4. Set the corresponding skip value `p` and branching factor
     //     `b`.
     //  5. Reserve contiguous memory for `2^b` child nodes, and store
-    //     the pointer of the first address in this block in the `pointer`
+    //     the pointer to the first address in this block in the `pointer`
     //     field.
     //  6. Given the length of the common prefix `p` and branching factor
     //     `b`, the current group can be subdivided into `b` new groups with
