@@ -17,7 +17,7 @@ Trie compress_trie(trie, fill_factor, root_branching_factor) {
     //     we might want to reserve extra space. Otherwise, we'd need to
     //     re-build the whole thing each time we wanted to expand the trie.
     //  2. Allocate memory for the root.
-    //  3. Iterate for each group untill all nodes are covered. The first group
+    //  3. Recurse for each group untill all nodes are covered. The first group
     //     is **all nodes**.
     //      0. If the current group has only one address, create a **leaf node**
     //         with the skip value and branching factor set to 0. Set the
