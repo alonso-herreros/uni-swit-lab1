@@ -1,3 +1,14 @@
+typedef struct LCTNode {
+    // Instead of the 5 bit, 7 bit, 20 bit design described in the provided
+    // article, we are going to work with 8 bits, 8 bits and whatever pointer
+    // size we have.
+
+    uint8_t branch; ///< Branching factor. Number of bits to read.
+    uint8_t skip;   ///< Skip value. Number of bits to skip reading.
+    *void pointer;  ///< Pointer to the first child or the associated action.
+
+} LCTNode;
+
 /** Given a trie, return a compressed version.
  *
  *  Compresses the plain binary trie returned by `create_trie`
