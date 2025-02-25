@@ -65,6 +65,8 @@ LCTNode *compress_group(Action *base, int size, LCTNode *node) {
     //  1. Determine the length of the shared prefix. This can be done by
     //     comparing the first and last nodes of the group, since the base
     //     vector is sorted. This length is the **skip value**, `p`.
+    uint8_t skip = calculate_skip(base, size);
+
     //  2. Determine the branching factor. This is done by checking, for
     //     each possible branching factor `b` starting at 2, how many of the
     //     2^b prefixes of length `b` are present in the current group,
@@ -75,6 +77,8 @@ LCTNode *compress_group(Action *base, int size, LCTNode *node) {
     //     checked. If the ratio is *smaller than the fill factor*, it's
     //     considered too sparse, and the previous branching factor is
     //     applied.
+    uint8_t branch_factor = calculate_branch_factor(base, size);
+
     //  3. Create an **intermediate node**
     //  4. Set the corresponding skip value `p` and branching factor
     //     `b`.
