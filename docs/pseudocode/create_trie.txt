@@ -1,8 +1,8 @@
 //Defining the node structure
 struct TrieNode {
-    uint_32t data_binary; //IP address, pure binary
-    int prefixLength; //Lenght of the prefix
-    struct TrieNode *children[1]; //0 or 1
+    uint_32t data_binary; // IP address, pure binary
+    int prefixLength; // Length of the prefix associated to this node. 0 if there is no prefix.
+    struct TrieNode *children[1]; //Matrix that contains the left or right children in this node.
 }
 
 //Creating a TrieNode
@@ -16,8 +16,6 @@ TrieNode* create_Node() {
 //Function to insert an IP direction to the trie
 TrieNode* insert (TrieNode* root, string cidr, int data_decimal){//It's better to use a variable
  such as uint_32t for data_decimal
-    //Converting the IP to binary
-    int ip_binary = convert_to_binary(data_decimal);
     //Create an auxiliary node;
     TrieNode* aux = root;
     //obtaining the prefix
@@ -27,10 +25,10 @@ TrieNode* insert (TrieNode* root, string cidr, int data_decimal){//It's better t
         int bit = ip_binary[i];
 
         if(aux->children[bit]==NULL){ //We have reached an empty node
-            actual->hijos[bit] = create_Node();
+            aux->children[bit] = create_Node();
         }
         if(aux->)
-        aux = aux->hijos[bit]; //We move in the trie
+        aux = aux->children[bit]; // We move one level deeper in the trie
     }
 }
 
