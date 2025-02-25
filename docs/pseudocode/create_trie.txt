@@ -79,13 +79,13 @@ TrieNode* create_trie(int first, int n, int pre, int pos) {
 //The skip represents the length of the largest common prefix (LCP). This value is crucial as it allows use
 //to skip the comparison of bits that we know that they are shared. 
 //As the vector "base" is sorted, the LCP will be between the first and the last chain of the vector.
-int computeSkip(int pre, int first, n):
+uint8_t computeSkip(int pre, int first, n):
     if n <= 1:
         return 0  // No common prefix if there's only one string
 
     string1 = base[first]        // First string in the subinterval
     string2 = base[first + n - 1] // Last string in the subinterval
-    int skip = 0
+    uint8_t skip = 0
 
     // Compare bits starting from position 'pre'
     while (string1[pre + skip] == string2[pre + skip]):
@@ -98,7 +98,7 @@ int computeSkip(int pre, int first, n):
 //The branch factor indicates how many bits will be used for dividing the chains of the vector.
 //If branch = 2 => 2^2= 4 children.
 //The objective is to find the greatest value for branch.
-int computeBranch(pre, first, n, skip):
+uint8_t computeBranch(pre, first, n, skip):
     if n <= 1:
         return 0  // No branching needed if there's only one string
 
