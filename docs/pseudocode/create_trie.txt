@@ -27,7 +27,7 @@ TrieNode* insert (TrieNode* root, string cidr, int data_decimal){//It's better t
         int bit = ip_binary[i];
 
         if(aux->children[bit]==NULL){ //We have reached an empty node
-            actual->hijos[bit] = create_Node();
+            aux->children[bit] = create_Node();
         }
         if(aux->)
         aux = aux->hijos[bit]; //We move in the trie
