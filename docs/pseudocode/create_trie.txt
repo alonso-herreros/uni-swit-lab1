@@ -1,48 +1,43 @@
-//Defining the node structure
-struct TrieNode {
-    uint_32t data_binary; // IP address, pure binary
-    int prefixLength; // Length of the prefix associated to this node. 0 if there is no prefix.
-    struct TrieNode *children[1]; //Matrix that contains the left or right children in this node.
-}
+//Recursive function for creating an LC-trie
+//FIRST: first member of the subinterval
+//n: it indicates how many IP directions do we have in the actual
+//subinterval
+//PRE: how many equal initial bits do we have in the directions
+//of the interval
+//For example, if we had: 192.168: 11000000 10
+//and 192.169: 11000000 10
+//In this case pre=10
+//If in a subinterval of the trie, we have that pre is
+//smaller, it will update
+//POS: first free position in the vector that holds the
+//representation of the trie
 
-//Creating a TrieNode
-TrieNode* create_Node() {
-    Initializing Trie* 0 and Trie *1 to NULL;
-    end = 0;
-    data_binary = -1;
-    Return the node;
-}
+TrieNode* create_trie(int first, int n, int pre, int pos) {
+    //If the interval contains only one string, we simply create a leaf
+    if(n==1){
+        trie[pos] = {0, 0, first};
+        return;
+    }
+    //If not we compute the skip value (which is the number of bits that 
+    //can be ignored)
+    skip = computeSkip(pre, first, n);
+    //and the branch value (quantity of direct children nodes);
+    //For allocating the memory of the tree it is enough to check the first free
+    //position in the vector
+    //In the pseudocode, it is assumed that memory has been allocated for the root node
+    //before the procedure is invoked
+    adr = allocateMemory(2^branch);
+    trie[pos] = {branch, skip, adr};
 
-//Function to insert an IP direction to the trie
-TrieNode* insert (TrieNode* root, string cidr, int data_decimal){//It's better to use a variable
- such as uint_32t for data_decimal
-    //Create an auxiliary node;
-    TrieNode* aux = root;
-    //obtaining the prefix
-    int prefix = to_number(cidr);
-
-    for (int i=0; i<prefix; i++){
-        int bit = ip_binary[i];
-
-        if(aux->children[bit]==NULL){ //We have reached an empty node
-            aux->children[bit] = create_Node();
-        }
-        if(aux->)
-        aux = aux->children[bit]; // We move one level deeper in the trie
+    //auxiliary value
+    p = first
+    for bitpat = 0 to 2^branch - 1{
+        k = 0
+        while(EXTRACT(pre + skip, branch, base[p + k])== bitpat)
+            k = k + 1
+        //Recursive call
+        build(p, k, pre + skip, adr + bitpat);
+        p = p + k;
     }
 }
 
-//Creating a trie from the r.txt file
-TrieNode* create_trie(r.txt) {
-    Creating a root node with CreateNode();
-
-    Open r.txt
-    While text is not empty:
-        Read line
-        Extract data in decimal and CIDR direction
-        Insert the node
-    Close the file
-    Return the root of the trie;
-}
-
-To check the changes
