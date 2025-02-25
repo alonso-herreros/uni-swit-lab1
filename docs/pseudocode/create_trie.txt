@@ -1,6 +1,6 @@
 //Defining the node structure
 struct TrieNode {
-    uint_32t data_binary; //IP binary coded
+    uint_32t data_binary; // IP address, pure binary
     int prefixLength; //It indicates if it is the end of a CIDR prefix
     struct TrieNode *children[1]; //0 or 1
 }
