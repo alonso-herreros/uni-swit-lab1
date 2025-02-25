@@ -30,7 +30,7 @@ TrieNode* insert (TrieNode* root, string cidr, int data_decimal){//It's better t
             aux->children[bit] = create_Node();
         }
         if(aux->)
-        aux = aux->hijos[bit]; //We move in the trie
+        aux = aux->children[bit]; // We move one level deeper in the trie
     }
 }
 
