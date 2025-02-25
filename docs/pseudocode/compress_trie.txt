@@ -9,6 +9,21 @@ typedef struct LCTNode {
 
 } LCTNode;
 
+typedef struct Action {
+    // In this assignment, it's only required to include information about the
+    // outgoing interface (and ovbiously, the prefix).
+
+    uint32_t prefix; ///< Full IP prefix. Bits beyond `prefix_len` should be 0.
+
+    // We technically only need 6 bits. We could also store the whole subnet
+    // mask, saving a few bit operations at the cost of extra memory.
+    uint8_t prefix_len; ///< Length of the prefix. Must be between 0 and 32.
+
+    // As per the specs, this should support at least 32000 different
+    // interfaces.
+    uint16_t outgoing_interface; ///< Outgoing interface. Up to 65536.
+} Action;
+
 /** Given a trie, return a compressed version.
  *
  *  Compresses the plain binary trie returned by `create_trie`
