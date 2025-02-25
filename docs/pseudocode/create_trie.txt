@@ -44,3 +44,5 @@ TrieNode* create_trie(r.txt) {
     Close the file
     Return the root of the trie;
 }
+
+To check the changes
