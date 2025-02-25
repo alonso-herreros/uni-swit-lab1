@@ -92,7 +92,7 @@ LCTNode *compress_group(Action *base, int size, LCTNode *node) {
     node->pointer = malloc(n_children*sizeof(LCTNode));
 
     //  6. Given the length of the common prefix `p` and branching factor
-    //     `b`, the current group can be subdivided into `b` new groups with
+    //     `b`, the current group can be subdivided into `2^b` new groups with
     //     a shared prefix of length `p + b`. Repeat the subroutine on each
     //     created subgroup, placing the resulting leaf or intermediate
     //     node in the reserved memory space, in branch bits order (meaning,
