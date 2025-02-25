@@ -119,4 +119,24 @@ LCTNode *compress_group(Action *base, int size, LCTNode *node, Action *def) {
     //     the subroutine with a group which only has the default action for
     //     the current group (prefix matching all members), if there is one,
     //     or the default action otherwise.
+
+    /// Index for next child to populate.
+    int child_n = 0;
+
+    for (int i=0; i<size; i++) {
+
+        // If the current action applies also to the last prefix in the group,
+        // then all inner actions match as well. This will be our new default
+        if (prefix_matches(base[size].prefix, base[i])) {
+            default=base[i];
+        }
+        // bits_eq(num1, num2, start, n_bits)
+        // should compare `n_bits` bits starting at `start` from the numbers
+        // `num1` and `num2` and return a 1 if they are equal.
+        if (!bits_eq(*base[i], i, branch_factor)) {
+            group_start = 
+        }
+
+        compress_group(group_start, group_size, node->pointer + child_n)
+    }
 }
