@@ -82,6 +82,9 @@ LCTNode *compress_group(Action *base, int size, LCTNode *node) {
     //  3. Create an **intermediate node**
     //  4. Set the corresponding skip value `p` and branching factor
     //     `b`.
+    node->skip = skip;
+    node->branch = branch_factor;
+
     //  5. Reserve contiguous memory for `2^b` child nodes, and store
     //     the pointer to the first address in this block in the `pointer`
     //     field.
