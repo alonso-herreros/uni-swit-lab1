@@ -1,7 +1,7 @@
 //Defining the node structure
 struct TrieNode {
     uint_32t data_binary; // IP address, pure binary
-    int prefixLength; //It indicates if it is the end of a CIDR prefix
+    int prefixLength; // Length of the prefix associated to this node. 0 if there is no prefix.
     struct TrieNode *children[1]; //0 or 1
 }
 
