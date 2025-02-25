@@ -1,4 +1,36 @@
-//Recursive function for creating an LC-trie
+//The first step is to sort the base vector, by using for example a quick sort algorithm, which is typically sufficient
+//Although we could use a radix-sorting algorithm for higher speeds.
+//The proposed algorithm is the following one
+//arr: array of prefixes to sort
+//low: initial index of the array
+//high: final index of the array
+void quicksort(uint32_t *arr, int low, int high) {
+    if (low < high) {
+        int pivotIndex = partition(arr, low, high); //We choose a pivot prefix
+        quicksort(arr, low, pivotIndex - 1);  // We sort the left part
+        quicksort(arr, pivotIndex + 1, high); // We sort the right part
+    }
+}
+
+int partition(uint32_t *arr, int low, int high) {
+    uint32_t pivot = arr[high];  // Last element as pivot element
+    int i = low - 1;  
+
+    for (int j = low; j < high; j++) {
+        if (arr[j] <= pivot) {  // Comparison
+            i++;
+            uint32_t temp = arr[i];
+            arr[i] = arr[j];
+            arr[j] = temp;
+        }
+    }
+    uint32_t temp = arr[i + 1];
+    arr[i + 1] = arr[high];
+    arr[high] = temp;
+    return i + 1;
+}
+//Then, developing a recursive function for creating an LC-trie by following a top-down construction of the 
+//LC-trie
 //FIRST: first member of the subinterval
 //n: it indicates how many IP directions do we have in the actual
 //subinterval
@@ -19,10 +51,11 @@ TrieNode* create_trie(int first, int n, int pre, int pos) {
         return;
     }
     //If not we compute the skip value (which is the number of bits that 
-    //can be ignored)
+    //can be ignored). Explained better in the code part
     skip = computeSkip(pre, first, n);
     //and the branch value (quantity of direct children nodes);
-    //For allocating the memory of the tree it is enough to check the first free
+    branch = computeBranch(pre, first, n, skip);
+    //For allocating the memory of the trie it is enough to check the first free
     //position in the vector
     //In the pseudocode, it is assumed that memory has been allocated for the root node
     //before the procedure is invoked
@@ -33,6 +66,8 @@ TrieNode* create_trie(int first, int n, int pre, int pos) {
     p = first
     for bitpat = 0 to 2^branch - 1{
         k = 0
+        //EXTRACT(p, b, s) is a function that returns the number
+        //given by the b bits starting at position p in the string s
         while(EXTRACT(pre + skip, branch, base[p + k])== bitpat)
             k = k + 1
         //Recursive call
@@ -41,3 +76,53 @@ TrieNode* create_trie(int first, int n, int pre, int pos) {
     }
 }
 
+//The skip represents the length of the largest common prefix (LCP). This value is crucial as it allows use
+//to skip the comparison of bits that we know that they are shared. 
+//As the vector "base" is sorted, the LCP will be between the first and the last chain of the vector.
+int computeSkip(int pre, int first, n):
+    if n <= 1:
+        return 0  // No common prefix if there's only one string
+
+    string1 = base[first]        // First string in the subinterval
+    string2 = base[first + n - 1] // Last string in the subinterval
+    int skip = 0
+
+    // Compare bits starting from position 'pre'
+    while (string1[pre + skip] == string2[pre + skip]):
+        skip = skip + 1
+        if (pre + skip) >= length_of_strings: //when we reach the end of the string we stop
+            break  
+
+    return skip
+
+//The branch factor indicates how many bits will be used for dividing the chains of the vector.
+//If branch = 2 => 2^2= 4 children.
+//The objective is to find the greatest value for branch.
+int computeBranch(pre, first, n, skip):
+    if n <= 1:
+        return 0  // No branching needed if there's only one string
+
+    max_branch = 0
+    current_branch = 1
+
+    // Iterate to find the maximum possible branching factor
+    while True:
+        //Checks if all possible combinations of branch are present in the chain of the vector.
+        if not allCombinationsPresent(pre + skip, current_branch, first, n): 
+            break  // Stop if a combination is missing
+
+        max_branch = current_branch
+        current_branch = current_branch + 1
+
+    return max_branch
+
+function allocateMemory(num_nodes):
+    // Reserve memory for 'num_nodes' nodes in the trie
+    // Each node occupies a fixed size (e.g., 4 bytes)
+    memory_size = num_nodes * size_of_node
+
+    // Allocate memory. This function has to be implemented
+    memory_block = allocate(memory_size)
+
+    // Return the starting address of the allocated memory block
+    return memory_block
