@@ -55,6 +55,13 @@ LCTNode *compress_group(Action *base, int size, LCTNode *node) {
     //     with the skip value and branching factor set to 0. Set the
     //     `pointer` to the memory location of the action. Skip the rest of the
     //     iteration.
+    if (size == 1) {
+        node->branch = 0;
+        node->skip = 0;
+        node->pointer = base;
+        return node;
+    }
+
     //  1. Determine the length of the shared prefix. This can be done by
     //     comparing the first and last nodes of the group, since the base
     //     vector is sorted. This length is the **skip value**, `p`.
