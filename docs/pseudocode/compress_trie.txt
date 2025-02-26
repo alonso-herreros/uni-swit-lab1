@@ -1,42 +1,7 @@
-typedef struct LCTNode {
-    // Instead of the 5 bit, 7 bit, 20 bit design described in the provided
-    // article, we are going to work with 8 bits, 8 bits and whatever pointer
-    // size we have.
-
-    uint8_t branch; ///< Branching factor. Number of bits to read.
-    uint8_t skip;   ///< Skip value. Number of bits to skip reading.
-    *void pointer;  ///< Pointer to the first child or the associated action.
-
-} LCTNode;
-
-typedef struct Action {
-    // In this assignment, it's only required to include information about the
-    // outgoing interface (and ovbiously, the prefix).
-
-    uint32_t prefix; ///< Full IP prefix. Bits beyond `prefix_len` should be 0.
-
-    // We technically only need 6 bits. We could also store the whole subnet
-    // mask, saving a few bit operations at the cost of extra memory.
-    uint8_t prefix_len; ///< Length of the prefix. Must be between 0 and 32.
-
-    // As per the specs, this should support at least 32000 different
-    // interfaces.
-    uint16_t outgoing_interface; ///< Outgoing interface. Up to 65536.
-} Action;
-
 /** Given a trie, return a compressed version.
- *
- *  Compresses the plain binary trie returned by `create_trie`
- *
- *  @param root the root to a plain binary trie to compress
- *  @param fill_factor the fill factor to apply. Must be a real number between
- *      0 and 1
- *  @param root_branching_factor the branching factor to apply to the root.
- *      If unset, the fill factor applies.
- *
- *  @return the memory address of the root node
- *
- *  @see https://dl.acm.org/doi/10.1109/49.772439 for details
+ *  
+ *  This function is quite redundant in an LC-trie based system, as the trie
+ *  is compressed at creation. Regardless, it is described below.
  */
 LCTNode compress_trie(trie, fill_factor, root_branching_factor) {
     //  1. Build and sort the **base vector**. We might want to use quick sort.
@@ -44,60 +9,28 @@ LCTNode compress_trie(trie, fill_factor, root_branching_factor) {
     //     that this is difficult to expand once the memory is allocated, so
     //     we might want to reserve extra space. Otherwise, we'd need to
     //     re-build the whole thing each time we wanted to expand the trie.
-    //  2. Allocate memory for the root.
-    //  3. Recurse for each group untill all nodes are covered. The first group
-    //     is **all nodes**.
+    base_vector = build_base_vector_from_trie(trie);
+    // If we build from a Forwarding Information Base, we should use a different
+    // procedure.
+    base_vector = sort(base_vector);
+    // Any sorting method is valid. The order should be: shortest prefix first,
+    // lowest numerical value first.
+
+    create_trie_from_base_vector(base_vector)
+    // Creates the trie. The implementation is not part of this file.
 }
 
-/** Given a range of the sorted base vector, get an LC-Trie node covering it.
- *
- *  Stores the required information in the given memory space, which must have
- *  been properly allocated. If size is 1, the node is a leaf node, otherwise
- *  it's an intermediate node.
- *
- *  @param base the starting position in the base vector, which is a sorted
- *      array of Actions.
- *  @param size the number of (contiguous) elements from the base vector that
- *      belong to this group.
- *  @param node the pointer to memory where this node shall be placed. Must
- *      be pre-allocated.
- *
- *  @return The address of the node covering the given group. Same as the
- *      address given in `node`.
- */
-LCTNode *compress_group(Action *base, int size, LCTNode *node) {
-    //  0. If the current group has only one address, create a **leaf node**
-    //     with the skip value and branching factor set to 0. Set the
-    //     `pointer` to the memory location of the action. Skip the rest of the
-    //     iteration.
-    //  1. Determine the length of the shared prefix. This can be done by
-    //     comparing the first and last nodes of the group, since the base
-    //     vector is sorted. This length is the **skip value**, `p`.
-    //  2. Determine the branching factor. This is done by checking, for
-    //     each possible branching factor `b` starting at 2, how many of the
-    //     2^b prefixes of length `b` are present in the current group,
-    //     disregarding the common prefix determined by the skip value. If
-    //     the ratio of present prefixes to total possible prefixes for a
-    //     branching factor `b` is *greater than the fill factor*, it's
-    //     considered populated enough, and the next branching factor is
-    //     checked. If the ratio is *smaller than the fill factor*, it's
-    //     considered too sparse, and the previous branching factor is
-    //     applied.
-    //  3. Create an **intermediate node**
-    //  4. Set the corresponding skip value `p` and branching factor
-    //     `b`.
-    //  5. Reserve contiguous memory for `2^b` child nodes, and store
-    //     the pointer to the first address in this block in the `pointer`
-    //     field.
-    //  6. Given the length of the common prefix `p` and branching factor
-    //     `b`, the current group can be subdivided into `b` new groups with
-    //     a shared prefix of length `p + b`. Repeat the subroutine on each
-    //     created subgroup, placing the resulting leaf or intermediate
-    //     node in the reserved memory space, in branch bits order (meaning,
-    //     the first node in the memory space is the one starting with `b`
-    //     zeroes, and the last node is the one starting with `b` ones). In
-    //     the case of a `b`-bit prefix group not having any members, run
-    //     the subroutine with a group which only has the default action for
-    //     the current group (prefix matching all members), if there is one,
-    //     or the default action otherwise.
+build_base_vector_from_trie(trie) {
+    base_vector = empty array of actions;
+
+    if (trie.branch == 0) {
+        base_vector.append(action pointed to by trie.pointer);
+    }
+
+    for (i=0; i<2^trie.branch, i++) {
+        child = dereference(trie.pointer + i);
+        sub_base_vector = build_base_vector_from_trie(child)
+        base_vector.append(sub_base_vector)
+    }
+    return base_vector;
 }
