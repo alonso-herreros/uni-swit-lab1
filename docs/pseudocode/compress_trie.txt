@@ -1,3 +1,4 @@
+
 /** Given a trie, return a compressed version.
  *  
  *  This function is quite redundant in an LC-trie based system, as the trie

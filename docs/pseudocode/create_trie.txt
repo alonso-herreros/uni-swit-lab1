@@ -1,3 +1,311 @@
-Tree create_trie(file) {
-This is a change to check the repository.
+/** Create an LC-trie from a given file.
+ *
+ * This is the function the teachers asked for during the lab session on
+ * Wednesday, feb 19 2025.
+ */
+TrieNode* create_trie(file) {
+    // First, we'll read the file line by line and add the data to an unsorted
+    // base vector.
+    // An action is defined by a CIDR prefix and an outgoing interface.
+    actions = actions_from_file(file);
+
+    //The next step is to sort the base vector, by using for example a quick
+    //sort algorithm, which is typically sufficient
+    //Although we could use a radix-sorting algorithm for higher speeds.
+    //The algorithm in question shall be developed separately, possibly as an
+    //addition to `utils`.
+    base_vector = sort(actions);
+
+    // Then we must allocate the memory for the root (the rest is done
+    // recursively)
+    root_ptr = allocate_memory(1 * size of TrieNode);
+
+    // Run the recursive subtrie creation function, with the intial
+    // group set to the entire base vector and no default action.
+    create_subtrie(base_vector, length of base_vector, 0, root_ptr, null);
+}
+
+actions_from_file(file) {
+    array = empty array of actions;
+
+    while (line=readline(file)) {
+        // Parse a line with a CIDR prefix and an outgoing interface, storing
+        // the results into variables
+        scanf("%s/%d\t%d", prefix_str, prefix_len, out_iface);
+        // scanf() is supposed to do the opposite of printf.
+
+        // Defined by a CIDR prefix and an outgoing interface.
+        action = { // Initialize the data type with values
+            prefix = parse_ip(prefix_str), // Parses an A.B.C.D ip to binary
+            prefix_len = prefix_len,
+            out_iface = out_iface
+        };
+        array.append(action);
+
+    }
+
+    return array;
+}
+
+/** Recursively create a subtrie.
+ *
+ *  @param group_ptr the memory address of the group's first member (a memory
+ *      address in a SORTED base vector)
+ *  @param group_size the number of actions in this group, including the one
+ *      at `group`.
+ *  @param pre_skip the number of bits already skipped and read by parent groups
+ *  @param node_ptr the memory address where the root node of the subtrie should
+ *      be placed. Must have been previously allocated
+ *
+ *  @returns the memory address of the root node of the generated subtrie
+ */
+create_subtrie(group_ptr, group_size, pre_skip, node_ptr, default_action) {
+    // If the interval contains only one string, we simply create a leaf.
+    // Its branch and skip values are 0, and its pointer points to the only
+    // action in the current group.
+    if (n==1) {
+        node_ptr->branch = 0;
+        node_ptr->skip = 0;
+        node_ptr->pointer = group_ptr;
+        return node_ptr;
+    }
+
+    // Compute the skip value, which is the number of bits shared by all
+    // prefixes in the group. How this works is described in the function.
+    skip = compute_skip(group_ptr, group_size, pre_skip);
+
+    // Compute the branch value, which affects the number of direct children
+    // nodes. How this works is described in the function.
+    branch = compute_branch(group_ptr, group_size, pre_skip + skip);
+
+    // Allocate memory for all children nodes, storing the memory position of
+    // the first one.
+    first_child_ptr = allocate_memory(2^branch * size of TrieNode);
+
+    // At this point, we have all the fields required for the node.
+    node_ptr->skip = skip;
+    node_ptr->branch = branch;
+    node_ptr->pointer = first_child_ptr;
+
+    // We should determine if there is a prefix in this group which encompasses
+    // all subgroups. This is necessary when using FILL_FACTOR < 1.
+    new_default_action = compute_default(group_ptr, group_size, pre_skip);
+    if (new_default_action) // Returns 0 if there is no default for the group.
+        default_action = new_default_action;
+
+    // TODO: I noticed we have to skip the "group defaults" if there
+    // are any.
+    // Possible fix:
+    // new_default_index = compute_default(group_ptr, group_size, pre_skip);
+    // if (new_default_index) { // Returns 0 if there is no default for the group.
+    //     default_action = group[new_default_action];
+    //     group = group + new_default_action;
+    // }
+
+    // We can start building children
+
+    // Any children of this node can skip this many bits from the get-go
+    children_skip = pre_skip + skip + branch;
+
+    // We'll create a subtrie for each child by dividing the current group in
+    // subgroups
+
+    subgroup_ptr = group_ptr; // Pointer to the first member of each subgroup
+
+    // The `child_n` variable is the same as the bits corresponding to the
+    // `branch` bits that we are going to read, i.e. for a `branch` factor of
+    // 3, child_n is `000` in the first iteration, `001` in the second, etc.
+    for child_n = 0 to (2^branch-1) {
+        // Memory location of the root node of this child subtrie. Should be
+        // allocated.
+        subtrie_ptr = node_ptr->pointer + child_n;
+
+        // Here, we count how many actions have a prefix that matches the
+        // current subgroup.
+        subgroup_size = 0;
+        while true { // 'Infinite' because the break point is in the middle
+            if (subgroup_ptr - group > group_size)
+                break;
+            // Scan next unscanned action
+            action = subgroup_ptr[subgroup_size];
+
+            // The 'branch number' is the number represented by the `branch`
+            // bits from the active prefix, starting at position
+            // `pre_skip + skip`. It's the number that's supposed to match
+            // the child number.
+            branch_number = extract(action.prefix, pre_skip + skip, branch);
+            // extract(bitstring, start, n_bits) returns the `n_bits` bits
+            // starting at position `start` in the bit string `bitstring`, as
+            // an `n_bit` bit integer.
+
+            // This is the loop's breaking point. Before increment.
+            if (branch_number != child_n)
+                break;
+
+            subgroup_size++;
+        }
+
+        // In case we had a fill factor lower than 1, we may find that we need
+        // to create 'dummy' children for subgroups of size 0.
+        if (subgroup_size == 0) {
+            // We assign the default action (which may have been set by a
+            // parent node). We pass a group size of 1 and whatever pre_skip
+            // value (doesn't matter).
+            create_subtrie(default_action, 1, 0, subtrie_ptr);
+            continue;
+        }
+
+        //Recursive call
+        create_subtrie(subgroup_ptr, subgroup_size, children_skip,
+                subtrie_ptr, subtrie_default_action);
+
+        // Update the start point of the next subgroup
+        subgroup += subgroup_size;
+    }
+
+    // Once all children are populated (recursively), return this subgroup's
+    // root.
+    return node_ptr;
+}
+
+// The skip represents the length of the largest common prefix (LCP). This
+// value is crucial as it allows us to skip the comparison of bits that all
+// members of a group share. In PATRICIA trees, this was used to remove nodes
+// with only one child. As the base vector is sorted, if the first and last
+// members of a group share a prefix, all members in between must share it too.
+
+/** Get the length of the largest common prefix in a group of actions.
+ *
+ *  @param group the memory address of the group's first member (a memory
+ *      address in a SORTED base vector)
+ *  @param group_size the number of actions in this group, including the one
+ *      at `group`. Must be greater than 0. If it's 1, the return value will be
+ *      the maximum.
+ *  @param pre_skip the number of bits already skipped and read by parent groups
+ *
+ *  @return the skip value.
+ *
+ *  @warning Do not pass 0 as group size to avoid core dumps.
+ */
+compute_skip(group, group_size, pre_skip) {
+    // I don't think we need to care about this case tbh
+    // if (n <= 1) {
+    //     return 0; // No common prefix if there's only one string
+    // }
+
+    prefix_first = group[0].prefix;           // First prefix in the group
+    prefix_last = group[group_size-1].prefix; // Last prefix in the group
+
+    // Find the longest common prefix. Init to 1 becuase comparing 0-length
+    // numbers makes no sense.
+    lcp = 1;
+    // Set the limit to the number of bits in the prefix data types
+    while (lcp < 8 * size of prefix_first) {
+        // Extract the bits we want to compare
+        prefix_first_trunc = extract(prefix_first, pre_skip, lcp);
+        prefix_last_trunc = extract(prefix_trunc, pre_skip, lcp);
+
+        // Compare bits starting from position `pre_skip`
+        if (prefix_first_trunc != prefix_last_trunc)
+            return lcp - 1; // Subtract 1 because this check failed
+
+        lcp++;
+    }
+
+    return lcp; // Will only get here at full match
+}
+
+//The branch factor indicates how many bits will be used for dividing the
+//chains of the vector. If branch = 2 => 2^2= 4 children. The objective is to
+//find the greatest value for branch.
+
+/** Get the branch factor for the given group. Depends on BRANCH_FACTOR. Set
+ *  BRANCH_FACTOR to 1 to require complete population.
+ *
+ *  @param group the memory address of the group's first member (a memory
+ *      address in a SORTED base vector)
+ *  @param group_size the number of actions in this group, including the one
+ *      at `group`.
+ *  @param pre_skip the number of bits already skipped and read by parent groups
+ *
+ *  @return the branching factor.
+ */
+compute_branch(group, group_size, pre_skip) {
+    if (group_size <= 1)
+        return 0;  // No branching needed if there's only one member
+
+    branch = 1;
+
+    while true {
+        // There are `2^branch` combinations of `branch` bits
+        max_branch_prefixes = 2^branch;
+        unique_branch_prefixes = 1; // Since the group can't be empty
+        last_branch_prefix = extract(group[0].prefix, skip, branch);
+
+        // Starting at 1 to avoid comparing the first member with itself.
+        for (i=1; i < group_size; i++) {
+            action = group[i];
+
+            // The prefix is the first `branch` bits after `skip`
+            branch_prefix = extract(action.prefix, skip, branch);
+
+            // If the prefix is not the same as the last one, we have a new
+            // unique branch prefix.
+            if (branch_prefix != last_branch_prefix)
+                unique_branch_prefixes++;
+
+            last_branch_prefix = branch_prefix
+        }
+
+        // If the FILL_FACTOR requirement is not fullfilled, return this branch
+        // number.
+        if (unique_branch_prefixes/max_branch_prefixes < FILL_FACTOR)
+            return branch;
+
+        branch++;
+    }
+
+    return branch;
+}
+
+/** Get the most specific action which applies to all possible subgroups.
+ *
+ *  @param group the memory address of the group's first member (a memory
+ *  address in a SORTED base vector) @param group_size the number of actions in
+ *  this group, including the one at `group`.  @param pre_skip the number of
+ *  bits already skipped and read by parent groups
+ *
+ *  @return a pointer to the action with the most specific rule which can be
+ *  applied to all possible subgroups, or 0 if there is none.
+ */
+compute_default(group, group_size, pre_skip) {
+    // We'll compare each action to the last one. If the last action is
+    // encompassed by it, this action is considered a default for the group,
+    // and the next action is checked for the same condition.
+
+    action_index = 0;
+    default_action = 0;
+
+    for (i=0; i < group_size; i++) {
+        // We check a match of the last member's prefix against the action
+        if (prefix_match(group[i], group[group_size-1].prefix)) {
+            // If it matches, all elements of the group are encompassed
+            // by the curent action, so it's a default we need to consider.
+            default_action = group + i;
+        }
+        else {
+            break;
+        }
+    }
+    return default_action;
+}
+
+prefix_match(action, address) {
+    address_trunc = extract(address, 0, action.prefix_len);
+    return action.prefix == address_trunc;
+}
+
+// Example implementation
+extract(bitstring, start, n_bits) {
+    return (bitstring << start) >> start + (size of bitstring - n_bits);
 }
