@@ -1,3 +1,36 @@
-Trie compress_trie(trie) {
+/** Given a trie, return a compressed version.
+ *  
+ *  This function is quite redundant in an LC-trie based system, as the trie
+ *  is compressed at creation. Regardless, it is described below.
+ */
+LCTNode compress_trie(trie, fill_factor, root_branching_factor) {
+    //  1. Build and sort the **base vector**. We might want to use quick sort.
+    //     Check https://www.geeksforgeeks.org/quick-sort-in-c/. Keep in mind
+    //     that this is difficult to expand once the memory is allocated, so
+    //     we might want to reserve extra space. Otherwise, we'd need to
+    //     re-build the whole thing each time we wanted to expand the trie.
+    base_vector = build_base_vector_from_trie(trie);
+    // If we build from a Forwarding Information Base, we should use a different
+    // procedure.
+    base_vector = sort(base_vector);
+    // Any sorting method is valid. The order should be: shortest prefix first,
+    // lowest numerical value first.
 
+    create_trie_from_base_vector(base_vector)
+    // Creates the trie. The implementation is not part of this file.
+}
+
+build_base_vector_from_trie(trie) {
+    base_vector = empty array of actions;
+
+    if (trie.branch == 0) {
+        base_vector.append(action pointed to by trie.pointer);
+    }
+
+    for (i=0; i<2^trie.branch, i++) {
+        child = dereference(trie.pointer + i);
+        sub_base_vector = build_base_vector_from_trie(child)
+        base_vector.append(sub_base_vector)
+    }
+    return base_vector;
 }
