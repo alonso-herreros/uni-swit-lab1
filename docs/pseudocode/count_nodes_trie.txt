@@ -1,0 +1,16 @@
+int countNodes(node, trie):
+    if node is a leaf:
+        return 1  // Leaf nodes count as 1
+
+    total = 1  // Count the current node
+
+    // Get the branching factor and the address of the first child
+    branch = node.branch
+    first_child = node.adr //Pointer to the first child
+
+    // Recursively count the nodes in each subtree
+    for i from 0 to (2 ** branch) - 1:
+        child_node = trie[first_child + i]
+        total = total + countNodes(child_node, trie)
+
+    return total
