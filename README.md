@@ -32,6 +32,11 @@ output interface for forwarding packets based on a Forwarding Information Base
 | Alonso Herreros Copete          | 100493990  |
 | Ismael Martín de Vidales Martín | 100496143  |
 
+### Scope and limitations
+
+The project focuses on complying with the requirements specified in the [Lab
+Guide](Lab%20Guide.pdf).
+
 ## Compilation
 
 Use the provided `Makefile` to compile.
