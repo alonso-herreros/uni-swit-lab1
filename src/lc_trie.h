@@ -8,7 +8,10 @@
 
 // ==== Data Types ====
 
-// Assuming IP addresses are 32-bit for IPv4 based on the context
+/** IP address type.
+ *
+ * This is a 32-bit unsigned integer representing an IPv4 address.
+ */
 typedef uint32_t ip_addr_t;
 
 
