@@ -17,12 +17,12 @@
 
 ## Project Overview
 
-This project implements an IP route lookup algorithm in C to determine the
-output interface for forwarding packets based on a Forwarding Information Base
-(FIB).
+This project implements an IP route lookup algorithm in C to **determine the
+output interface** for forwarding packets based on a Forwarding Information
+Base (FIB).
 
-* **Algorithm**: LC-tries
-* **Description**: Implements route lookups using LC-tries, optimizing Patricia
+* **Algorithm**: LC-trie
+* **Description**: Implements route lookups using an LC-trie, optimizing Patricia
   tries for speed and memory.
 
 ### Lab group - Authors
