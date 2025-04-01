@@ -59,3 +59,15 @@ ip_addr_t get_prefix(ip_addr_t bitstring, uint8_t prefix_len);
 
 // ==== Functions ====
 
+
+// WARN: Untested example implementation. Subject to change
+bool prefix_match(const Rule *rule, ip_addr_t address) {
+    ip_addr_t address_trunc = extract_bits(address, 0, rule->prefix_len);
+    return rule->prefix == address_trunc;
+}
+
+// WARN: Untested example implementation. Subject to change
+uint32_t extract_bits(uint32_t bitstring, uint8_t start, uint8_t n_bits) {
+    uint32_t mask = (1 << n_bits) - 1;  // Mask with the n_bits LSBs set to 1
+    return (bitstring >> start) & mask; // Shift and apply the mask
+}
