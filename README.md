@@ -1,9 +1,19 @@
-# Switching - Lab 1. Route Lookup
-**`[GITT]` `[Sem 3.2]` `[Swit]` `(Spring 2025)`**
+## Switching
 
-**Telecommunication Technologies Engineering** | *Universidad Carlos III de Madrid*
+# Lab 1. Route Lookup
 
----
+<!-- [![CC BY-SA 4.0][shield-cc-by-sa]][cc-by-sa] -->
+<!-- markdownlint-disable MD053 -->
+[![GITT][shield-gitt]][gitt]
+[![Switching][shield-swit]][swit]
+
+[shield-cc-by-sa]: https://img.shields.io/badge/License-CC%20BY--SA%204.0-lightgrey.svg
+[shield-gitt]:     https://img.shields.io/badge/Degree-Telecommunication_Technologies_Engineering_|_UC3M-eee
+[shield-swit]:     https://img.shields.io/badge/Course-Switching-eee
+
+[cc-by-sa]: https://creativecommons.org/licenses/by-sa/4.0/
+[gitt]:     https://uc3m.es/bachelor-degree/telecommunication
+[swit]:     https://aplicaciones.uc3m.es/cpa/generaFicha?est=252&plan=445&asig=15390&idioma=2
 
 ## Project Overview
 
