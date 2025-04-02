@@ -40,8 +40,9 @@ typedef struct TrieNode {
      *
      * If this is an internal node, it points to its first child node.
      * If this is a leaf node, it points to the rule associated with it.
+     * 'You don't need type safety if you know what you're doing' – Sun Tzu
      */
-    uint32_t pointer;
+    void *pointer;
 } TrieNode;
 
 /** Forwarding rule.
