@@ -70,9 +70,14 @@ typedef struct Rule {
 
 // TODO: complete these docs
 
-/** Create an LC-Trie from a FIB file.
+/** Create an LC-Trie from a set of rules.
+ *
+ * @param rules Pointer to an array of rules.
+ * @param num_rules Number of rules in the array.
+ *
+ * @return Pointer to the root node of the LC-Trie.
  */
-TrieNode* create_trie(const char *file);
+TrieNode* create_trie(Rule *rules, size_t num_rules);
 
 /** Free the memory allocated for the LC-Trie.
  *
