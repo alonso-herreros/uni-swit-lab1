@@ -8,10 +8,7 @@
 
 // ==== Data Types ====
 
-/** IP address type.
- *
- * This is a 32-bit unsigned integer representing an IPv4 address.
- */
+/// An IP address as a 32-bit unsigned integer.
 typedef uint32_t ip_addr_t;
 
 
@@ -57,14 +54,25 @@ typedef struct TrieNode {
 TrieNode* create_trie(const char *file);
 
 /** Free the memory allocated for the LC-Trie.
+ *
+ * @param trie Pointer to the root node of the LC-Trie.
  */
 void free_trie(TrieNode *trie);
 
 /** Count the total number of nodes in a given LC-Trie.
+ *
+ * @param trie Pointer to the root node of the LC-Trie.
+ *
+ * @return The total number of nodes in the LC-Trie.
  */
-uint32_t count_nodes_trie(ip_addr_t ip_addr, TrieNode *trie);
+uint32_t count_nodes_trie(TrieNode *trie);
 
 /** Look up an IP address in the given LC-Trie and return the next out port.
+ *
+ * @param ip_addr The IP address to look up.
+ * @param trie Pointer to the root node of the LC-Trie.
+ *
+ * @return The outgoing interface associated with the longest matching prefix.
  */
 uint32_t lookup_ip(ip_addr_t ip_addr, TrieNode *trie);
 
