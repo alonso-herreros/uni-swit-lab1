@@ -6,8 +6,54 @@
 
 // ==== Function Prototypes ====
 
+// ---- Trie creation ----
+
+/** Recursively create a subtrie.
+ *
+ *  @param group the memory address of the group's first member (a memory
+ *      address in a SORTED base vector)
+ *  @param group_size the number of actions in this group, including the one
+ *      at `group`.
+ *  @param pre_skip the number of bits already skipped and read by parent groups
+ *  @param node_ptr the memory address where the root node of the subtrie should
+ *      be placed. Must have been previously allocated.
+ *
+ *  @returns the memory address of the root node of the generated subtrie
+ */
+TrieNode* create_subtrie(
+    Rule *group, size_t group_size, uint8_t pre_skip,
+    TrieNode *node_ptr, Rule *default_rule);
 
 // ---- Dependency functions ----
+
+/** Get the length of the largest common prefix in a group of actions.
+ *
+ *  @param group the memory address of the group's first member (a memory
+ *      address in a SORTED base vector)
+ *  @param group_size the number of actions in this group, including the one
+ *      at `group`. Must be greater than 0.
+ *  @param pre_skip the number of bits already skipped and read by parent groups
+ *
+ *  @return the skip value. If `group_size` is 1, all remaining bits can be
+ *      skipped. The absolute maximum value is 32.
+ */
+uint8_t compute_skip(const Rule *group, size_t group_size, uint8_t pre_skip);
+
+/** Get the branch factor for the given group. Depends on FILL_FACTOR. A
+ *  FILL_FACTOR of 1 enforces complete population.
+ *
+ *  @param group the memory address of the group's first member (a memory
+ *      address in a SORTED base vector)
+ *  @param group_size the number of actions in this group, including the one
+ *      at `group`.
+ *  @param pre_skip the number of bits already skipped and read by parent groups
+ *
+ *  @return the branching factor. The absolute maximum value is 32.
+ */
+uint8_t compute_branch(const Rule *group, size_t group_size, uint8_t pre_skip);
+
+
+Rule* compute_default(const Rule *group, size_t group_size, uint8_t pre_skip);
 
 /** Check if an IP address matches a given rule.
  *
