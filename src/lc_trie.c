@@ -52,6 +52,14 @@ uint8_t compute_skip(const Rule *group, size_t group_size, uint8_t pre_skip);
  */
 uint8_t compute_branch(const Rule *group, size_t group_size, uint8_t pre_skip);
 
+/** Sort an array of Rules.
+ *
+ *  @param rules the Rule array to sort
+ *
+ *  @return a pointer to a sorted copy of the array. Its size is the same as the
+ *  input.
+ */
+Rule* sort_rules(Rule *rules);
 
 Rule* compute_default(const Rule *group, size_t group_size, uint8_t pre_skip);
 
