@@ -113,4 +113,6 @@ uint32_t lookup_ip(ip_addr_t ip_addr, TrieNode *trie);
 // Not going to add a 'compress_trie' function since the trie is born
 // compressed
 
+Rule* parseFibFile(const char* filename, size_t* count);
+
 #endif // LC_TRIE_H

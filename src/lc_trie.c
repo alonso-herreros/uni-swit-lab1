@@ -1,4 +1,6 @@
 #include "lc_trie.h"
+#include <stdlib.h>
+#include "utils.h"
 #include <stdio.h>
 // ==== Data Structures ====
 
@@ -104,4 +106,66 @@ bool prefix_match(const Rule *rule, ip_addr_t address) {
 uint32_t extract_bits(uint32_t bitstring, uint8_t start, uint8_t n_bits) {
     uint32_t mask = (1 << n_bits) - 1;  // Mask with the n_bits LSBs set to 1
     return (bitstring >> start) & mask; // Shift and apply the mask
+}
+
+Rule* parseFibFile(const char* filename, size_t* count) {
+    FILE* file = fopen(filename, "r");
+    if (!file) {
+        perror("Error opening FIB file");
+        return NULL;
+    }
+
+    // Primera pasada: contar el número de reglas
+    *count = 0;
+    int dummy_prefix_len, dummy_out_iface;
+    while (fscanf(file, "%*d.%*d.%*d.%*d/%d\t%d\n", &dummy_prefix_len, &dummy_out_iface) == 2) {
+        (*count)++;
+    }
+    rewind(file);
+
+    // Reservar memoria para las reglas
+    Rule* rules = malloc(*count * sizeof(Rule));
+    if (!rules) {
+        fclose(file);
+        perror("Memory allocation failed");
+        return NULL;
+    }
+
+    // Segunda pasada: leer las reglas
+    size_t index = 0;
+    int octets[4];
+    uint32_t netmask;
+    
+    while (index < *count && 
+           fscanf(file, "%d.%d.%d.%d/%hhu\t%u\n", 
+                  &octets[0], &octets[1], &octets[2], &octets[3],
+                  &rules[index].prefix_len, &rules[index].out_iface) == 6) {
+        
+        // Construir el prefijo en formato binario
+        rules[index].prefix = (octets[0] << 24) | (octets[1] << 16) | 
+                            (octets[2] << 8) | octets[3];
+        
+        // Aplicar la máscara de red para asegurar que solo los bits del prefijo son significativos
+        getNetmask(rules[index].prefix_len, (int*)&netmask);
+        rules[index].prefix &= netmask;
+        
+        index++;
+    }
+
+    fclose(file);
+
+    // Verificar que se leyeron todas las reglas esperadas
+    if (index != *count) {
+        fprintf(stderr, "Warning: File format mismatch. Expected %zu rules, read %zu\n", 
+               *count, index);
+        *count = index; // Actualizar el conteo real
+        
+        // Reajustar la memoria si es necesario
+        Rule* tmp = realloc(rules, *count * sizeof(Rule));
+        if (tmp) {
+            rules = tmp;
+        }
+    }
+
+    return rules;
 }
