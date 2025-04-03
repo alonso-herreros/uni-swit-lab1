@@ -6,6 +6,13 @@
 #include <stdbool.h> // For the bool type
 
 
+// ==== Constants ====
+
+#ifndef FILL_FACTOR
+#define FILL_FACTOR 1 // Default fill factor
+#endif
+
+
 // ==== Data Types ====
 
 /// An IP address as a 32-bit unsigned integer.
