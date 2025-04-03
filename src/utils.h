@@ -17,16 +17,24 @@ void getNetmask (int prefixLength, int *netmask);
  ********************************************************************/
 int hash(uint32_t IPAddress, int sizeHashTable);
 
-/** Extract `n_bits` bits starting at position `start` in `bitstring`.
- *
- * The extracted bits are placed in the least significant bits of the result.
+/** Extract `n_bits` bits starting at position `start`, LSB being 0.
  *
  * @param bitstring the bitstring to extract from
- * @param start the starting position (0-indexed)
+ * @param start the starting position (0-indexed, 0 being the LSB)
  * @param n_bits the number of bits to extract
  *
  * @return the extracted bits as an unsigned integer
  */
-uint32_t extract_bits(uint32_t bitstring, uint8_t start, uint8_t n_bits);
+uint32_t extract_lsb(uint32_t bitstring, uint8_t start, uint8_t n_bits);
+
+/** Extract `n_bits` bits starting at position `start`, MSB being 0.
+ *
+ * @param bitstring the bitstring to extract from
+ * @param start the starting position (0-indexed, 0 being the MSB)
+ * @param n_bits the number of bits to extract
+ *
+ * @return the extracted bits as an unsigned integer
+ */
+uint32_t extract_msb(uint32_t bitstring, uint8_t start, uint8_t n_bits);
 
 //RL Lab 2020 Switching UC3M
