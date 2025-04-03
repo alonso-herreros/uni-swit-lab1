@@ -20,4 +20,10 @@ int hash(uint32_t IPAddress, int sizeHashTable){
   return (index);
 
 }
+
+uint32_t extract_bits(uint32_t bitstring, uint8_t start, uint8_t n_bits) {
+    uint32_t mask = (1 << n_bits) - 1;  // Mask with the n_bits LSBs set to 1
+    return (bitstring >> start) & mask; // Shift and apply the mask
+}
+
 //RL Lab 2020 Switching UC3M
