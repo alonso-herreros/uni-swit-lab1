@@ -115,4 +115,6 @@ uint32_t lookup_ip(ip_addr_t ip_addr, TrieNode *trie);
 
 Rule* parseFibFile(const char* filename, size_t* count);
 
+Rule* sort_rules(Rule *rules, size_t num_rules);
+
 #endif // LC_TRIE_H

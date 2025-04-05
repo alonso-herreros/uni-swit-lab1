@@ -61,7 +61,39 @@ uint8_t compute_branch(const Rule *group, size_t group_size, uint8_t pre_skip);
  *  @return a pointer to a sorted copy of the array. Its size is the same as the
  *  input.
  */
-Rule* sort_rules(Rule *rules);
+// Función de comparación para qsort
+// Función de comparación con getNetmask
+int compare_rules(const void *a, const void *b) {
+    const Rule *ra = (const Rule*)a;
+    const Rule *rb = (const Rule*)b;
+    
+    // Aplicar máscara usando tu función
+    int netmask_a, netmask_b;
+    getNetmask(ra->prefix_len, &netmask_a);
+    getNetmask(rb->prefix_len, &netmask_b);
+    
+    ip_addr_t masked_a = ra->prefix & netmask_a;
+    ip_addr_t masked_b = rb->prefix & netmask_b;
+
+    if (masked_a < masked_b) return -1;
+    if (masked_a > masked_b) return 1;
+    
+    // Orden descendente por longitud de máscara
+    return rb->prefix_len - ra->prefix_len;
+}
+
+Rule* sort_rules(Rule *rules, size_t num_rules) {
+    if (!rules || num_rules == 0) {
+        return NULL;
+    }
+    
+    // Usa qsort de stdlib para ordenar el array
+    qsort(rules, num_rules, sizeof(Rule), compare_rules);
+    
+    return rules;
+}
+
+
 
 Rule* compute_default(const Rule *group, size_t group_size, uint8_t pre_skip);
 
@@ -121,6 +153,7 @@ Rule* parseFibFile(const char* filename, size_t* count) {
     while (fscanf(file, "%*d.%*d.%*d.%*d/%d\t%d\n", &dummy_prefix_len, &dummy_out_iface) == 2) {
         (*count)++;
     }
+    //printf("%zu\n",*count);
     rewind(file);
 
     // Reservar memoria para las reglas
@@ -139,7 +172,7 @@ Rule* parseFibFile(const char* filename, size_t* count) {
     while (index < *count && 
            fscanf(file, "%d.%d.%d.%d/%hhu\t%u\n", 
                   &octets[0], &octets[1], &octets[2], &octets[3],
-                  &rules[index].prefix_len, &rules[index].out_iface) == 6) {
+                  &rules[index].prefix_len, &rules[index].out_iface) == 6) {                    
         
         // Construir el prefijo en formato binario
         rules[index].prefix = (octets[0] << 24) | (octets[1] << 16) | 
@@ -151,6 +184,7 @@ Rule* parseFibFile(const char* filename, size_t* count) {
         
         index++;
     }
+    //printf("%zu\n", index);
 
     fclose(file);
 
