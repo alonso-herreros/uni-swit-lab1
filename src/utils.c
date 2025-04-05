@@ -4,13 +4,9 @@
  * Generate a netmask of length prefixLength
  ********************************************************************/
 void getNetmask(int prefixLength, int *netmask) {
-  if (prefixLength <= 0) {
-    *netmask = 0;
-} else if (prefixLength >= 32) {
-    *netmask = 0xFFFFFFFF;
-} else {
-    *netmask = (0xFFFFFFFF << (32 - prefixLength)) & 0xFFFFFFFF;
-}
+  
+  *netmask = (0xFFFFFFFF << (32 - prefixLength)) & 0xFFFFFFFF;
+
 }
 
 /********************************************************************

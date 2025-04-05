@@ -16,7 +16,41 @@ void printRule(const Rule* rule) {
            rule->out_iface);
 }
 
+//PRUEBA PARA CALCULAR EL SKIP DE LAS ARRAYS ORDENADAS DE RULES
+int main(int argc, char* argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <FIB_FILE>\n", argv[0]);
+        return 1;
+    }
 
+    size_t rule_count;
+    Rule* rules = parseFibFile(argv[1], &rule_count);
+    if (!rules) return 1;
+
+    printf("\n=== Loaded Rules ===\n");
+    for (size_t i = 0; i < rule_count; i++) {
+        printf("[%3zu] ", i + 1);
+        printRule(&rules[i]);
+    }
+
+    Rule *sorted = sort_rules(rules, rule_count);
+    
+    printf("\n=== Reglas ordenadas ===\n");
+    for (size_t i = 0; i < rule_count; i++) {
+        printRule(&sorted[i]);
+    }
+    printf("%zu\n",rule_count);
+    
+    uint8_t skip = compute_skip(sorted, rule_count, 0);
+    printf("\nResultado compute_skip: %u bits comunes\n", skip);
+
+    
+    free(sorted);    
+    return 0;
+    
+}
+
+//PRUEBA CONSTRUCCIÓN ARRAY DE RULES
 /*int main(int argc, char* argv[]) {
     if (argc != 2) {
         fprintf(stderr, "Usage: %s <FIB_FILE>\n", argv[0]);
@@ -41,54 +75,9 @@ void printRule(const Rule* rule) {
     return 0;
 }*/
 
+
+//PRUEBA ORDENACIÓN DEL ARRAY DE RULES
 /*int main(int argc, char* argv[]) {
-    if (argc != 2) {
-        fprintf(stderr, "Usage: %s <FIB_FILE>\n", argv[0]);
-        return 1;
-    }
-
-    size_t rule_count;
-    Rule* rules = parseFibFile(argv[1], &rule_count);
-    if (!rules) return 1;
-
-    printf("\n=== Loaded Rules ===\n");
-    for (size_t i = 0; i < rule_count; i++) {
-        printf("[%3zu] ", i + 1);
-        printRule(&rules[i]);
-    }
-
-    Rule *sorted_rules = sort_rules(rules);
-    
-    printf("\n=== Reglas ordenadas ===\n");
-    for(size_t i=0; i<rule_count; i++){
-        printf("[%3zu] ", i + 1);
-        printRule(&sorted_rules[i]);
-    }
-
-    free(sorted_rules);
-    return 0;
-
-    /*Rule *sorted_rules = sort_rules(rules);  // ¡Usa tu implementación!
-    
-    // 3. Mostrar reglas ordenadas
-    printf("\n=== Reglas ordenadas ===\n");
-    for (size_t i = 0; i < num_rules; i++) {
-        printf("%u.%u.%u.%u/%u -> if%u\n",
-               (sorted_rules[i].prefix >> 24) & 0xFF,
-               (sorted_rules[i].prefix >> 16) & 0xFF,
-               (sorted_rules[i].prefix >> 8) & 0xFF,
-               sorted_rules[i].prefix & 0xFF,
-               sorted_rules[i].prefix_len,
-               sorted_rules[i].out_iface);
-    }
-
-    // 4. Liberar memoria
-    free(sorted_rules);
-    free(rules);
-    return 0;
-}*/
-
-int main(int argc, char* argv[]) {
     if (argc != 2) {
         fprintf(stderr, "Usage: %s <FIB_FILE>\n", argv[0]);
         return 1;
@@ -102,6 +91,8 @@ int main(int argc, char* argv[]) {
     for (size_t i = 0; i < num_rules; i++) {
         printRule(&rules[i]);
     }
+    
+    
 
     Rule *sorted = sort_rules(rules, num_rules);
     
@@ -109,7 +100,8 @@ int main(int argc, char* argv[]) {
     for (size_t i = 0; i < num_rules; i++) {
         printRule(&sorted[i]);
     }
+    printf("%zu\n",num_rules);
 
     free(sorted);
     return 0;
-}
+}*/

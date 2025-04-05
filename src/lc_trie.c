@@ -39,7 +39,32 @@ TrieNode* create_subtrie(
  *  @return the skip value. If `group_size` is 1, all remaining bits can be
  *      skipped. The absolute maximum value is 32.
  */
-uint8_t compute_skip(const Rule *group, size_t group_size, uint8_t pre_skip);
+uint8_t compute_skip(const Rule *group, size_t group_size, uint8_t pre_skip) {
+    // --- Casos base ---
+    if (group_size == 0) return 0;
+    if (group_size == 1) return group[0].prefix_len - pre_skip;
+
+    // --- 1. Obtener prefijos enmascarados ---
+    uint32_t mask;
+    uint8_t min_len = (group[0].prefix_len < group[group_size-1].prefix_len) ? 
+                      group[0].prefix_len : group[group_size-1].prefix_len;
+    
+    getNetmask(min_len, &mask);  // Usamos la longitud mínima para la máscara
+    
+    ip_addr_t first = group[0].prefix & mask;
+    ip_addr_t last = group[group_size-1].prefix & mask;
+
+    // --- 2. Comparar bits desde pre_skip hasta min_len ---
+    uint8_t skip = pre_skip;
+    while (skip < min_len) {
+        // Extraer el bit (31 - skip) de cada prefijo (MSB = bit 31)
+        uint32_t mask_bit = 1 << (31 - skip);
+        if ((first & mask_bit) != (last & mask_bit)) break;
+        skip++;
+    }
+
+    return skip - pre_skip;
+}
 
 /** Get the branch factor for the given group. Depends on FILL_FACTOR. A
  *  FILL_FACTOR of 1 enforces complete population.
@@ -63,6 +88,8 @@ uint8_t compute_branch(const Rule *group, size_t group_size, uint8_t pre_skip);
  */
 // Función de comparación para qsort
 // Función de comparación con getNetmask
+
+//Tested sample, think kinda works
 int compare_rules(const void *a, const void *b) {
     const Rule *ra = (const Rule*)a;
     const Rule *rb = (const Rule*)b;
@@ -87,7 +114,6 @@ Rule* sort_rules(Rule *rules, size_t num_rules) {
         return NULL;
     }
     
-    // Usa qsort de stdlib para ordenar el array
     qsort(rules, num_rules, sizeof(Rule), compare_rules);
     
     return rules;
@@ -140,6 +166,7 @@ uint32_t extract_bits(uint32_t bitstring, uint8_t start, uint8_t n_bits) {
     return (bitstring >> start) & mask; // Shift and apply the mask
 }
 
+//Tested example, think it kinda works
 Rule* parseFibFile(const char* filename, size_t* count) {
     FILE* file = fopen(filename, "r");
     if (!file) {

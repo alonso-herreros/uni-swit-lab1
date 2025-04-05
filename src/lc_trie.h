@@ -117,4 +117,8 @@ Rule* parseFibFile(const char* filename, size_t* count);
 
 Rule* sort_rules(Rule *rules, size_t num_rules);
 
+uint8_t compute_skip(const Rule *group, size_t group_size, uint8_t pre_skip);
+
+uint32_t extract_bits(uint32_t bitstring, uint8_t start, uint8_t n_bits);
+
 #endif // LC_TRIE_H
