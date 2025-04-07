@@ -1,4 +1,5 @@
 #include "lc_trie.h"
+#include "io.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -11,6 +12,9 @@
 
 // Helper function to convert IP address string to uint32_t
 ip_addr_t ip_to_uint32(const char *ip_str);
+// Abstraction to read the FIB file and create the LC-trie
+TrieNode *trie_from_file(const char *fib_file);
+
 
 int main(int argc, char *argv[]) {
     if (argc != 3) {
@@ -18,20 +22,30 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    const char *fib_file = argv[1];
-    const char *input_file = argv[2];
-    const size_t input_file_len = strlen(input_file);
+    int status;     // Used at various points for return status checking
+    TrieNode *root; // Root of the trie we'll use through the program
+
+    char *fib_filename = argv[1];
+    char *input_filename = argv[2];
+    const size_t input_file_len = strlen(input_filename);
     const size_t output_file_len = input_file_len + OUT_PREFIX_LEN;
     char *output_file = malloc( sizeof(char) * (output_file_len+1) );
-    snprintf(output_file, sizeof(output_file), "%s.out", input_file);
+    snprintf(output_file, sizeof(output_file), "%s.out", input_filename);
 
-    TrieNode *root = create_trie(fib_file);
-    if (!root) {
-        fprintf(stderr, "Failed to create LC-trie from %s\n", fib_file);
+    // Initialize the I/O library
+    if ( (status=initializeIO(fib_filename, input_filename)) != OK ) {
+        printIOExplanationError(status);
         return 1;
     }
 
-    FILE *in_fp = fopen(input_file, "r");
+    // Attempt to create the trie from the FIB file
+    root = trie_from_file(fib_filename);
+    if (!root) {
+        printIOExplanationError(PARSE_ERROR);
+        return 1;
+    }
+
+    FILE *in_fp = fopen(input_filename, "r");
     if (!in_fp) {
         perror("Error opening input file");
         // You'll need a function to free the trie memory
@@ -95,4 +109,8 @@ ip_addr_t ip_to_uint32(const char *ip_str) {
         return (a << 24) | (b << 16) | (c << 8) | d;
     }
     return 0; // Error case
+}
+
+TrieNode *trie_from_file(const char *fib_file) {
+    return NULL; // Placeholder for the actual implementation
 }
