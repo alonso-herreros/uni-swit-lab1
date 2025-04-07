@@ -1,19 +1,30 @@
 #include "lc_trie.h"
 #include "io.h"
 #include <stdio.h>
-#include <stdlib.h>
 #include <stdint.h>
-#include <string.h>
-#include <sys/time.h> // For time measurements
+#include <time.h> // For time measurements
 
 // ==== Constants ====
 #define OUT_PREFIX ".out"
 #define OUT_PREFIX_LEN 4
 
-// Helper function to convert IP address string to uint32_t
-ip_addr_t ip_to_uint32(const char *ip_str);
 // Abstraction to read the FIB file and create the LC-trie
 TrieNode *trie_from_file(const char *fib_file);
+
+/** Look up an IP address in the trie, measure, and log the result
+ *
+ * @param ip_address The IP address to look up
+ * @param root The root of the trie to look up in
+ * @param[out] accumSearchTime Pointer where the time spent will be ADDED
+ * @param[out] accumAccessCount Pointer where the node access count will be
+ *      ADDED
+ *
+ * @return 0 on success, -1 on failure
+ */
+int profiled_lookup(
+    ip_addr_t ip_address, TrieNode *root,
+    double *p_searchingTime, int *p_tableAccessCount
+);
 
 
 int main(int argc, char *argv[]) {
@@ -45,72 +56,59 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    FILE *in_fp = fopen(input_filename, "r");
-    if (!in_fp) {
-        perror("Error opening input file");
-        // You'll need a function to free the trie memory
-        return 1;
+    // Accumulators for search time and memory accesses
+    double total_search_time = 0;  // Total time spent in lookups
+    int total_access_count = 0;    // Total number of 'table accesses'
+    int i = 0;                     // Total number of addresses processed
+
+    // Process the input packet file
+    ip_addr_t addr;
+    for (i=0; (status=readInputPacketFileLine(&addr)) != REACHED_EOF; i++) {
+        if (status != OK) {
+            printIOExplanationError(status); // Could be BAD_INPUT_FILE
+            return 1;
+        }
+        if (profiled_lookup(addr, root,
+                &total_search_time, &total_access_count) != 0) {
+            fprintf(stderr, "Error during lookup\n");
+            return 1;
+        }
     }
 
-    FILE *out_fp = fopen(output_file, "w");
-    if (!out_fp) {
-        perror("Error opening output file");
-        fclose(in_fp);
-        // Free trie memory
-        return 1;
-    }
+    // Print the summary information
+    int node_count = count_nodes_trie(root);
+    double avg_access_count = (double)total_access_count / i;
+    double avg_search_time = total_search_time / i;
+    printSummary(node_count, i, avg_access_count, avg_search_time);
 
-    char ip_str[4];
-    unsigned long long total_time = 0;
-    unsigned long long total_nodes = 0;
-    unsigned int packets_processed = 0;
-
-    struct timeval start, end;
-
-    while (fgets(ip_str, sizeof(ip_str), in_fp) != NULL) {
-        // Remove trailing newline
-        ip_str[strcspn(ip_str, "\n")] = 0;
-        ip_addr_t ip_address = ip_to_uint32(ip_str);
-
-        gettimeofday(&start, NULL);
-        uint32_t out_ifc = lookup_ip(ip_address, root);
-        gettimeofday(&end, NULL);
-
-        long long elapsed_time = (end.tv_sec - start.tv_sec) * 1000000LL + (end.tv_usec - start.tv_usec);
-        total_time += elapsed_time;
-        packets_processed++;
-        // In a real implementation, you would need to track the number of accessed nodes during lookup
-
-        fprintf(out_fp, "%s;%s;%d;%lld\n", ip_str, (out_ifc > 0) ? (char[]){out_ifc + '0', 0} : "MISS", 1, elapsed_time * 1000); // Example AccessedNodes and time in nanoseconds
-    }
-
-    // Print summary information as per the lab guide [18]
-    fprintf(out_fp, "\n");
-    fprintf(out_fp, "Number of nodes in the tree = %d\n", 0); // You need to implement counting nodes
-    fprintf(out_fp, "Packets processed = %u\n", packets_processed);
-    fprintf(out_fp, "Average node accesses = %.2f\n", (double)total_nodes / packets_processed);
-    fprintf(out_fp, "Average packet processing time (nsecs) = %.2f\n", (double)total_time * 1000 / packets_processed);
-    fprintf(out_fp, "Memory (Kbytes) = %d\n", 0); // You need to track memory usage
-    fprintf(out_fp, "CPU Time (secs) = %.6f\n", (double)0); // You might need to use clock() for CPU time
-
-    fclose(in_fp);
-    fclose(out_fp);
-
-    // Implement a function to free the entire trie structure to avoid memory leaks
-    // free_trie(root);
+    // Clean up
+    freeIO();
+    free_trie(root);
 
     return 0;
 }
 
-// Basic IP string to uint32_t conversion (you might need a more robust one)
-ip_addr_t ip_to_uint32(const char *ip_str) {
-    unsigned int a, b, c, d;
-    if (sscanf(ip_str, "%u.%u.%u.%u", &a, &b, &c, &d) == 4) {
-        return (a << 24) | (b << 16) | (c << 8) | d;
-    }
-    return 0; // Error case
-}
-
 TrieNode *trie_from_file(const char *fib_file) {
     return NULL; // Placeholder for the actual implementation
+}
+
+int profiled_lookup(
+        ip_addr_t ip_address, TrieNode *root,
+        double *p_searchingTime, int *p_tableAccessCount
+    ) {
+    // Placeholder for the actual implementation
+    struct timespec initialTime, finalTime; // Performance measurement
+    uint32_t outInterface = 0; // Set by lookup_ip
+
+    // Timed IP lookup
+    clock_gettime(CLOCK_MONOTONIC_RAW, &initialTime);
+    outInterface = lookup_ip(ip_address, root);
+    clock_gettime(CLOCK_MONOTONIC_RAW, &finalTime);
+
+    // Print output and performance to stdout and output file
+    printOutputLine(
+        ip_address, outInterface, &initialTime, &finalTime,
+        p_searchingTime, *p_tableAccessCount
+    );
+    return 0;
 }
