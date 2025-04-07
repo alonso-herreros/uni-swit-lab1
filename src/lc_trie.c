@@ -1,4 +1,5 @@
 #include "lc_trie.h"
+#include "io.h"
 #include <stdlib.h>
 #include "utils.h"
 #include <stdio.h>
@@ -167,7 +168,7 @@ uint32_t extract_bits(uint32_t bitstring, uint8_t start, uint8_t n_bits) {
 }
 
 //Tested example, think it kinda works
-Rule* parseFibFile(const char* filename, size_t* count) {
+/*Rule* parseFibFile(const char* filename, size_t* count) {
     FILE* file = fopen(filename, "r");
     if (!file) {
         perror("Error opening FIB file");
@@ -228,5 +229,51 @@ Rule* parseFibFile(const char* filename, size_t* count) {
         }
     }
 
+    return rules;
+}*/
+Rule* parseFibFile(int *numEntries) {
+    Rule *rules = NULL;
+    int capacity = 10;  // Capacidad inicial del array (puede ajustarse)
+    int count = 0;
+    uint32_t prefix;
+    int prefix_len, out_iface;
+    int result;
+
+    // Reservar memoria inicial
+    rules = (Rule*)malloc(capacity * sizeof(Rule));
+    if (rules == NULL) {
+        perror("Error al asignar memoria");
+        return NULL;
+    }
+
+    // Leer cada línea del archivo FIB usando readFIBLine
+    while ((result = readFIBLine(&prefix, &prefix_len, &out_iface)) == OK) {
+        // Si el array está lleno, redimensionar
+        if (count >= capacity) {
+            capacity *= 2;
+            Rule *temp = (Rule*)realloc(rules, capacity * sizeof(Rule));
+            if (temp == NULL) {
+                perror("Error al reasignar memoria");
+                free(rules);
+                return NULL;
+            }
+            rules = temp;
+        }
+
+        // Almacenar la entrada en el array
+        rules[count].prefix = prefix;
+        rules[count].prefix_len = (uint8_t)prefix_len;  // Cast a uint8_t
+        rules[count].out_iface = (uint32_t)out_iface;   // Cast a uint32_t
+        count++;
+    }
+
+    // Manejar errores de lectura (excepto EOF)
+    if (result != REACHED_EOF) {
+        fprintf(stderr, "Error al leer la tabla de enrutamiento (código: %d)\n", result);
+        free(rules);
+        return NULL;
+    }
+
+    *numEntries = count;
     return rules;
 }
