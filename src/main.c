@@ -56,10 +56,6 @@ int main(int argc, char *argv[]) {
 
     char *fib_filename = argv[1];
     char *input_filename = argv[2];
-    const size_t input_file_len = strlen(input_filename);
-    const size_t output_file_len = input_file_len + OUT_PREFIX_LEN;
-    char *output_file = malloc( sizeof(char) * (output_file_len+1) );
-    snprintf(output_file, sizeof(output_file), "%s.out", input_filename);
 
     // Initialize the I/O library
     if ( (status=initializeIO(fib_filename, input_filename)) != OK ) {
