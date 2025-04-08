@@ -23,7 +23,7 @@ TrieNode *trie_from_file(const char *fib_file);
  */
 int profiled_lookup(
     ip_addr_t ip_address, TrieNode *root,
-    double *p_searchingTime, int *p_tableAccessCount
+    double *accumSearchTime, int *accumAccessCount
 );
 
 
@@ -94,21 +94,30 @@ TrieNode *trie_from_file(const char *fib_file) {
 
 int profiled_lookup(
         ip_addr_t ip_address, TrieNode *root,
-        double *p_searchingTime, int *p_tableAccessCount
+        double *accumSearchTime, int *accumAccessCount
     ) {
     // Placeholder for the actual implementation
     struct timespec initialTime, finalTime; // Performance measurement
     uint32_t outInterface = 0; // Set by lookup_ip
+    int tableAccessCount = 0;  // Set by lookup_ip
 
+    // TODO: Pass tableAccessCount to lookup_ip (check #16)
     // Timed IP lookup
     clock_gettime(CLOCK_MONOTONIC_RAW, &initialTime);
     outInterface = lookup_ip(ip_address, root);
     clock_gettime(CLOCK_MONOTONIC_RAW, &finalTime);
 
+    double searchingTime; // Set by printOutputLine
+
     // Print output and performance to stdout and output file
     printOutputLine(
         ip_address, outInterface, &initialTime, &finalTime,
-        p_searchingTime, *p_tableAccessCount
+        &searchingTime, tableAccessCount
     );
+
+    // Update the accumulators
+    *accumSearchTime += searchingTime;
+    *accumAccessCount += tableAccessCount;
+
     return 0;
 }
