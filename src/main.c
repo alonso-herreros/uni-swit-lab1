@@ -116,7 +116,41 @@ TrieNode *read_trie() {
 }
 
 Rule *read_rules(int *rule_count) {
-    return NULL; // Placeholder for the actual implementation
+    // Min chars per line: 11
+    // Max chars per line: 24
+    int status;
+
+    // Temporarily using a basic dynamic array with exponential growth
+    size_t capacity = 2;
+    size_t size = 0;
+    Rule* rules = malloc(sizeof(Rule) * capacity);
+
+    ip_addr_t addr;
+    int prefix_len;
+    int out_iface;
+
+    while ((status=readFIBLine(&addr, &prefix_len, &out_iface)) != REACHED_EOF){
+        if (status != OK) {
+            free(rules);
+            return NULL;
+        }
+
+        if (size == capacity) { // Next element would overflow
+            capacity *= 2;
+            rules = realloc(rules, sizeof(Rule) * capacity);
+        }
+
+        rules[size].prefix = addr;
+        rules[size].prefix_len = prefix_len;
+        rules[size].out_iface = out_iface;
+
+        size++;
+    }
+
+    // Should we trim the array to the actual size, or leave some slack?
+    rules = realloc(rules, sizeof(Rule) * size);
+
+    return rules;
 }
 
 int profiled_lookup(
