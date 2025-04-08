@@ -18,6 +18,17 @@
  */
 TrieNode *read_trie();
 
+/** Read the FIB file and return a heap-allocated array of rules
+ *
+ * @param[out] rule_count Pointer where the number of rules will be stored
+ *
+ * @return A pointer to the (unsorted) array of rules, or NULL on failure
+ *
+ * @warning The FIB file is read using the IO library, which is assumed to be
+ *      initialized.
+ */
+Rule *read_rules(int *rule_count);
+
 /** Look up an IP address in the trie, measure, and log the result
  *
  * @param ip_address The IP address to look up
@@ -96,6 +107,15 @@ int main(int argc, char *argv[]) {
 }
 
 TrieNode *read_trie() {
+    int rule_count = 0;
+    Rule *rules = read_rules(&rule_count);
+
+    TrieNode *root = create_trie(rules, rule_count);
+
+    return root;
+}
+
+Rule *read_rules(int *rule_count) {
     return NULL; // Placeholder for the actual implementation
 }
 
