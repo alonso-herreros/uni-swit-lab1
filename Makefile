@@ -15,7 +15,7 @@ PROD_BIN   = my_route_lookup
 TEST_BIN   = $(BUILD_DIR)/test_runner
 
 CC = gcc
-CFLAGS = -Wall -O3 -I$(SRC_DIR)
+CFLAGS += -Wall -O3 -I$(SRC_DIR)
 
 all: $(PROD_BIN)
 
