@@ -8,8 +8,15 @@
 #define OUT_PREFIX ".out"
 #define OUT_PREFIX_LEN 4
 
-// Abstraction to read the FIB file and create the LC-trie
-TrieNode *trie_from_file(const char *fib_file);
+/** Read the FIB file and create a trie
+ *
+ * @return A pointer to the root of the trie, or NULL on failure
+ *
+ * @warning The FIB file is read using the IO library, which is assumed to be
+ *      initialized.
+ * @warning The caller is responsible for freeing the memory using free_trie().
+ */
+TrieNode *read_trie();
 
 /** Look up an IP address in the trie, measure, and log the result
  *
@@ -50,7 +57,7 @@ int main(int argc, char *argv[]) {
     }
 
     // Attempt to create the trie from the FIB file
-    root = trie_from_file(fib_filename);
+    root = read_trie();
     if (!root) {
         printIOExplanationError(PARSE_ERROR);
         return 1;
@@ -88,7 +95,7 @@ int main(int argc, char *argv[]) {
     return 0;
 }
 
-TrieNode *trie_from_file(const char *fib_file) {
+TrieNode *read_trie() {
     return NULL; // Placeholder for the actual implementation
 }
 
