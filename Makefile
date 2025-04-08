@@ -30,13 +30,13 @@ $(PROD_BIN): $(PROD_OBJS)
 $(TEST_BIN): $(BUILD_DIR) $(TEST_OBJS) $(SHARED_OBJS)
 	$(CC) $(CFLAGS) $(TEST_OBJS) $(SHARED_OBJS) -o $@ -lm
 
-$(BUILD_DIR)/%.o: $(SRC_DIR)/%.c
+# I wish this worked, but it doesn't due to the way pattern matching works
+# $(BUILD_DIR)/%: | $(BUILD_DIR)
+
+$(BUILD_DIR)/%.o: $(SRC_DIR)/%.c | $(BUILD_DIR)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-$(BUILD_DIR)/%.o: $(SRC_DIR)/%.c
-	$(CC) $(CFLAGS) -c $< -o $@
-
-$(BUILD_DIR)/%.o: $(TEST_DIR)/%.c
+$(BUILD_DIR)/%.o: $(TEST_DIR)/%.c | $(BUILD_DIR)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 $(BUILD_DIR):
