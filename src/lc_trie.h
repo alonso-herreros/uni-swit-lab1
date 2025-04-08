@@ -9,7 +9,7 @@
 // ==== Constants ====
 
 #ifndef FILL_FACTOR
-#define FILL_FACTOR 1 // Default fill factor
+
 #endif
 
 
@@ -113,12 +113,18 @@ uint32_t lookup_ip(ip_addr_t ip_addr, TrieNode *trie);
 // Not going to add a 'compress_trie' function since the trie is born
 // compressed
 
-Rule* parseFibFile(const char* filename, size_t* count);
+//I needed to add them here in order to check my functions in proobs_main.c
+//Rule* parseFibFile(const char* filename, size_t* count);
 
 Rule* sort_rules(Rule *rules, size_t num_rules);
+uint8_t compute_branch(const Rule *group, size_t group_size, uint8_t pre_skip);
 
 uint8_t compute_skip(const Rule *group, size_t group_size, uint8_t pre_skip);
 
 uint32_t extract_bits(uint32_t bitstring, uint8_t start, uint8_t n_bits);
+
+Rule* compute_default(const Rule *group, size_t group_size, uint8_t pre_skip);
+
+bool prefix_match(const Rule *rule, ip_addr_t address);
 
 #endif // LC_TRIE_H

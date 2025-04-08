@@ -3,11 +3,38 @@
 #include <stdlib.h>
 #include "utils.h"
 #include <stdio.h>
+
+// ==== Constants ====
+#define FILL_FACTOR 0.5  // Determines how densely populated branches must be
+#define MAX_BITS 32      // Number of bits in an IPv4 address
+#define MAX_BRANCH 5     // Maximum branching factor to limit memory usage
+
+// ==== Auxiliary functions ====
+int compare_rules(const void *a, const void *b) {
+    const Rule *rule_a = (const Rule *)a;
+    const Rule *rule_b = (const Rule *)b;
+    
+    // Special case: default route (0.0.0.0/0) always comes first
+    if (rule_a->prefix_len == 0 && rule_a->prefix == 0) return -1;
+    if (rule_b->prefix_len == 0 && rule_b->prefix == 0) return 1;
+    
+    // First compare the prefix values
+    if (rule_a->prefix < rule_b->prefix) return -1;
+    if (rule_a->prefix > rule_b->prefix) return 1;
+    
+    // For equal prefixes, shorter prefix lengths come first
+    if (rule_a->prefix_len < rule_b->prefix_len) return -1;
+    if (rule_a->prefix_len > rule_b->prefix_len) return 1;
+    
+    // If prefix and length are equal, compare interfaces (stable sort)
+    return rule_a->out_iface - rule_b->out_iface;
+}
+
 // ==== Data Structures ====
 
-
-
 // ==== Function Prototypes ====
+
+
 
 // ---- Trie creation ----
 
@@ -23,9 +50,69 @@
  *
  *  @returns the memory address of the root node of the generated subtrie
  */
-TrieNode* create_subtrie(
-    Rule *group, size_t group_size, uint8_t pre_skip,
-    TrieNode *node_ptr, Rule *default_rule);
+TrieNode* create_subtrie(Rule *group, size_t group_size, uint8_t pre_skip,
+    TrieNode *node_ptr, Rule *default_rule) {
+// Caso base: grupo con un solo elemento
+if (group_size == 1) {
+node_ptr->branch = 0;
+node_ptr->skip = 0;
+node_ptr->pointer = (TrieNode*)group;  // Almacenamos la regla directamente
+return node_ptr;
+}
+
+// Calculamos skip y branch
+uint8_t skip = compute_skip(group, group_size, pre_skip);
+uint8_t branch = compute_branch(group, group_size, pre_skip + skip);
+
+// Calculamos el nuevo default_rule si existe
+Rule *new_default = compute_default(group, group_size, pre_skip);
+if (new_default) {
+default_rule = new_default;
+}
+
+// Reservamos memoria para los hijos
+size_t num_children = 1 << branch;
+TrieNode *children = malloc(num_children * sizeof(TrieNode));
+if (!children) return NULL;
+
+// Configuramos el nodo actual
+node_ptr->branch = branch;
+node_ptr->skip = skip;
+node_ptr->pointer = children;
+
+// Preparamos para crear los subgrupos
+uint8_t children_skip = pre_skip + skip + branch;
+size_t current_pos = 0;
+
+for (size_t child_n = 0; child_n < num_children; child_n++) {
+// Encontramos el subgrupo para este hijo
+size_t subgroup_size = 0;
+while (current_pos + subgroup_size < group_size) {
+uint32_t current_prefix = extract_bits(
+group[current_pos + subgroup_size].prefix, 
+pre_skip + skip, 
+branch);
+
+if (current_prefix != child_n) break;
+subgroup_size++;
+}
+
+// Creamos el subtrie
+if (subgroup_size == 0) {
+// Subgrupo vacío, usamos la regla por defecto
+create_subtrie(default_rule, 1, 0, &children[child_n], default_rule);
+} else {
+// Subgrupo no vacío, llamada recursiva
+create_subtrie(
+&group[current_pos], subgroup_size, children_skip,
+&children[child_n], default_rule);
+}
+
+current_pos += subgroup_size;
+}
+
+return node_ptr;
+}
 
 // ---- Dependency functions ----
 
@@ -78,7 +165,38 @@ uint8_t compute_skip(const Rule *group, size_t group_size, uint8_t pre_skip) {
  *
  *  @return the branching factor. The absolute maximum value is 32.
  */
-uint8_t compute_branch(const Rule *group, size_t group_size, uint8_t pre_skip);
+uint8_t compute_branch(const Rule *group, size_t group_size, uint8_t pre_skip) {
+    // Base case: no branching needed for single rule
+    if (group_size <= 1) return 0;
+
+    uint8_t branch = 1;
+    
+    // Find largest branch where unique prefixes exceed FILL_FACTOR threshold
+    while (branch <= (MAX_BITS - pre_skip)) {
+        size_t max_combinations = 1 << branch;  // 2^branch possible prefixes
+        size_t unique_prefixes = 1;
+        uint32_t last_prefix = extract_bits(group[0].prefix, pre_skip, branch);
+
+        // Count unique prefixes in this branch configuration
+        for (size_t i = 1; i < group_size; i++) {
+            uint32_t current = extract_bits(group[i].prefix, pre_skip, branch);
+            if (current != last_prefix) {
+                unique_prefixes++;
+                last_prefix = current;
+            }
+        }
+
+        // Check if current branch meets density requirement
+        if ((float)unique_prefixes / (float)max_combinations > FILL_FACTOR) {
+            branch++;
+        } else {
+            break;
+        }
+    }
+
+    // Limit branch size to prevent excessive memory usage
+    return (branch > MAX_BRANCH) ? MAX_BRANCH : branch;
+}
 
 /** Sort an array of Rules.
  *
@@ -90,39 +208,46 @@ uint8_t compute_branch(const Rule *group, size_t group_size, uint8_t pre_skip);
 // Función de comparación para qsort
 // Función de comparación con getNetmask
 
-//Tested sample, think kinda works
-int compare_rules(const void *a, const void *b) {
-    const Rule *ra = (const Rule*)a;
-    const Rule *rb = (const Rule*)b;
-    
-    // Aplicar máscara usando tu función
-    int netmask_a, netmask_b;
-    getNetmask(ra->prefix_len, &netmask_a);
-    getNetmask(rb->prefix_len, &netmask_b);
-    
-    ip_addr_t masked_a = ra->prefix & netmask_a;
-    ip_addr_t masked_b = rb->prefix & netmask_b;
 
-    if (masked_a < masked_b) return -1;
-    if (masked_a > masked_b) return 1;
-    
-    // Orden descendente por longitud de máscara
-    return rb->prefix_len - ra->prefix_len;
-}
 
 Rule* sort_rules(Rule *rules, size_t num_rules) {
-    if (!rules || num_rules == 0) {
-        return NULL;
-    }
+    // Create copy to avoid modifying original array
+    Rule *sorted = malloc(num_rules * sizeof(Rule));
+    if (!sorted) return NULL;
     
-    qsort(rules, num_rules, sizeof(Rule), compare_rules);
+    memcpy(sorted, rules, num_rules * sizeof(Rule));
     
-    return rules;
+    // Sort using standard library qsort
+    qsort(sorted, num_rules, sizeof(Rule), compare_rules);
+    
+    return sorted;
 }
 
-
-
-Rule* compute_default(const Rule *group, size_t group_size, uint8_t pre_skip);
+/** Get the most specific action which applies to all possible subgroups.
+ *
+ *  @param group the memory address of the group's first member (a memory
+ *  address in a SORTED base vector) @param group_size the number of actions in
+ *  this group, including the one at `group`.  @param pre_skip the number of
+ *  bits already skipped and read by parent groups
+ *
+ *  @return a pointer to the action with the most specific rule which can be
+ *  applied to all possible subgroups, or 0 if there is none.
+ */
+Rule* compute_default(const Rule *group, size_t group_size, uint8_t pre_skip) {
+    if (group_size == 0) return NULL;
+    
+    Rule *default_rule = NULL;
+    
+    // Check for rules that cover entire current address space
+    for (size_t i = 0; i < group_size; i++) {
+        if (group[i].prefix_len <= pre_skip) {
+            default_rule = (Rule*)&group[i];
+            break;
+        }
+    }
+    
+    return default_rule;
+}
 
 /** Check if an IP address matches a given rule.
  *
@@ -131,7 +256,18 @@ Rule* compute_default(const Rule *group, size_t group_size, uint8_t pre_skip);
  *
  *  @return true if the address matches the rule, false otherwise
  */
-bool prefix_match(const Rule *action, ip_addr_t address);
+bool prefix_match(const Rule *rule, ip_addr_t address) {
+    if (rule == NULL || rule->prefix_len == 0) {
+        return false;
+    }
+    
+    // Create a mask for the prefix length
+    uint32_t mask = (rule->prefix_len == 32) ? 0xFFFFFFFF : 
+                   (1 << (32 - rule->prefix_len)) - 1 ^ 0xFFFFFFFF;
+    
+    // Compare the masked portions
+    return (address & mask) == (rule->prefix & mask);
+}
 
 /** Extract a specific number of bits from a bitstring.
  *
@@ -144,7 +280,13 @@ bool prefix_match(const Rule *action, ip_addr_t address);
  *
  *  @return the extracted bits as an unsigned integer
  */
-uint32_t extract_bits(uint32_t bitstring, uint8_t start, uint8_t n_bits);
+uint32_t extract_bits(uint32_t bitstring, uint8_t start, uint8_t n_bits) {
+    if (n_bits == 0 || n_bits > 32 || start >= 32 || start + n_bits > 32) {
+        return 0; // Validación básica para evitar errores
+    }
+    uint32_t mask = (n_bits == 32) ? 0xFFFFFFFF : ((1U << n_bits) - 1);
+    return (bitstring >> start) & mask;
+}
 
 
 // ---- Lookup ----
@@ -152,128 +294,25 @@ bool check_prefix(ip_addr_t ip_addr, ip_addr_t target_prefix, uint8_t prefix_len
 ip_addr_t get_prefix(ip_addr_t bitstring, uint8_t prefix_len);
 
 
-// ==== Functions ====
+//Assuming the Rule matrix introduced is already sorted
+TrieNode* create_trie(Rule *rules, size_t num_rules) {
+    if (rules == NULL || num_rules == 0) return NULL;
 
+    // Create root node
+    TrieNode *root = malloc(sizeof(TrieNode));
+    if (!root) return NULL;
 
-// WARN: Untested example implementation. Subject to change
-bool prefix_match(const Rule *rule, ip_addr_t address) {
-    ip_addr_t address_trunc = extract_bits(address, 0, rule->prefix_len);
-    return rule->prefix == address_trunc;
+    // Build trie recursively (assuming create_subtrie is implemented)
+    create_subtrie(rules, num_rules, 0, root, NULL);
+
+    return root;
 }
 
-// WARN: Untested example implementation. Subject to change
-uint32_t extract_bits(uint32_t bitstring, uint8_t start, uint8_t n_bits) {
-    uint32_t mask = (1 << n_bits) - 1;  // Mask with the n_bits LSBs set to 1
-    return (bitstring >> start) & mask; // Shift and apply the mask
-}
 
-//Tested example, think it kinda works
-/*Rule* parseFibFile(const char* filename, size_t* count) {
-    FILE* file = fopen(filename, "r");
-    if (!file) {
-        perror("Error opening FIB file");
-        return NULL;
-    }
 
-    // Primera pasada: contar el número de reglas
-    *count = 0;
-    int dummy_prefix_len, dummy_out_iface;
-    while (fscanf(file, "%*d.%*d.%*d.%*d/%d\t%d\n", &dummy_prefix_len, &dummy_out_iface) == 2) {
-        (*count)++;
-    }
-    //printf("%zu\n",*count);
-    rewind(file);
 
-    // Reservar memoria para las reglas
-    Rule* rules = malloc(*count * sizeof(Rule));
-    if (!rules) {
-        fclose(file);
-        perror("Memory allocation failed");
-        return NULL;
-    }
 
-    // Segunda pasada: leer las reglas
-    size_t index = 0;
-    int octets[4];
-    uint32_t netmask;
-    
-    while (index < *count && 
-           fscanf(file, "%d.%d.%d.%d/%hhu\t%u\n", 
-                  &octets[0], &octets[1], &octets[2], &octets[3],
-                  &rules[index].prefix_len, &rules[index].out_iface) == 6) {                    
-        
-        // Construir el prefijo en formato binario
-        rules[index].prefix = (octets[0] << 24) | (octets[1] << 16) | 
-                            (octets[2] << 8) | octets[3];
-        
-        // Aplicar la máscara de red para asegurar que solo los bits del prefijo son significativos
-        getNetmask(rules[index].prefix_len, (int*)&netmask);
-        rules[index].prefix &= netmask;
-        
-        index++;
-    }
-    //printf("%zu\n", index);
 
-    fclose(file);
 
-    // Verificar que se leyeron todas las reglas esperadas
-    if (index != *count) {
-        fprintf(stderr, "Warning: File format mismatch. Expected %zu rules, read %zu\n", 
-               *count, index);
-        *count = index; // Actualizar el conteo real
-        
-        // Reajustar la memoria si es necesario
-        Rule* tmp = realloc(rules, *count * sizeof(Rule));
-        if (tmp) {
-            rules = tmp;
-        }
-    }
 
-    return rules;
-}*/
-Rule* parseFibFile(int *numEntries) {
-    Rule *rules = NULL;
-    int capacity = 10;  // Capacidad inicial del array (puede ajustarse)
-    int count = 0;
-    uint32_t prefix;
-    int prefix_len, out_iface;
-    int result;
 
-    // Reservar memoria inicial
-    rules = (Rule*)malloc(capacity * sizeof(Rule));
-    if (rules == NULL) {
-        perror("Error al asignar memoria");
-        return NULL;
-    }
-
-    // Leer cada línea del archivo FIB usando readFIBLine
-    while ((result = readFIBLine(&prefix, &prefix_len, &out_iface)) == OK) {
-        // Si el array está lleno, redimensionar
-        if (count >= capacity) {
-            capacity *= 2;
-            Rule *temp = (Rule*)realloc(rules, capacity * sizeof(Rule));
-            if (temp == NULL) {
-                perror("Error al reasignar memoria");
-                free(rules);
-                return NULL;
-            }
-            rules = temp;
-        }
-
-        // Almacenar la entrada en el array
-        rules[count].prefix = prefix;
-        rules[count].prefix_len = (uint8_t)prefix_len;  // Cast a uint8_t
-        rules[count].out_iface = (uint32_t)out_iface;   // Cast a uint32_t
-        count++;
-    }
-
-    // Manejar errores de lectura (excepto EOF)
-    if (result != REACHED_EOF) {
-        fprintf(stderr, "Error al leer la tabla de enrutamiento (código: %d)\n", result);
-        free(rules);
-        return NULL;
-    }
-
-    *numEntries = count;
-    return rules;
-}
