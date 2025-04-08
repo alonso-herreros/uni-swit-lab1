@@ -25,10 +25,10 @@ test: $(TEST_BIN)
 	@echo "==== Finished tests ===="
 
 $(PROD_BIN): $(PROD_OBJS)
-	$(CC) $(CFLAGS) $< -o $@ -lm
+	$(CC) $(CFLAGS) $^ -o $@ -lm
 
-$(TEST_BIN): $(BUILD_DIR) $(TEST_OBJS) $(SHARED_OBJS)
-	$(CC) $(CFLAGS) $(TEST_OBJS) $(SHARED_OBJS) -o $@ -lm
+$(TEST_BIN): $(TEST_OBJS) $(SHARED_OBJS)
+	$(CC) $(CFLAGS) $^ -o $@ -lm
 
 # I wish this worked, but it doesn't due to the way pattern matching works
 # $(BUILD_DIR)/%: | $(BUILD_DIR)
