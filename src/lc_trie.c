@@ -1,28 +1,5 @@
 #include "lc_trie.h"
 #include <stdio.h>
-// ==== Data Structures ====
-
-/** Forwarding rule.
- *
- * Associates a CIDR prefix with an outgoing interface. A packet with a
- * destination address matching the prefix should be sent to this interface
- * (unless overridden by a more specific rule).
- */
-typedef struct Rule {
-    /** CIDR prefix.
-     *
-     * Only the first `prefix_len` bits are significant. The rest are ignored,
-     * and should be set to 0.
-     */
-    ip_addr_t prefix;
-
-    /// Length of the prefix in bits.
-    uint8_t   prefix_len;
-
-    /// Outgoing interface associated with this rule.
-    uint32_t  out_iface;
-} Rule;
-
 
 // ==== Function Prototypes ====
 
