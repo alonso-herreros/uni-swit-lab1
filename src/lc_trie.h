@@ -5,19 +5,16 @@
 #include <stdint.h>  // For fixed-width integer types like uint32_t
 #include <stdbool.h> // For the bool type
 
-
 // ==== Constants ====
-#define FILL_FACTOR 0.5  // Determines how densely populated branches must be
+#define FILL_FACTOR 0.5 // Determines how densely populated branches must be
 #ifndef FILL_FACTOR
 
 #endif
-
 
 // ==== Data Types ====
 
 /// An IP address as a 32-bit unsigned integer.
 typedef uint32_t ip_addr_t;
-
 
 // ==== Data Structures ====
 
@@ -25,13 +22,14 @@ typedef uint32_t ip_addr_t;
  *
  * A node in an LC-Trie. It can be either an internal node or a leaf node.
  */
-typedef struct TrieNode {
+typedef struct TrieNode
+{
     /** Branch number (aka "branching factor").
      *
      * This is the number of bits that are used to branch out from this node.
      * For example, if the branch number is 2, this node will have 4 children.
      */
-    uint8_t  branch;
+    uint8_t branch;
 
     /** Length of the largest common prefix (LCP) under this node.
      *
@@ -41,7 +39,7 @@ typedef struct TrieNode {
      * first and last members of a group share a prefix, all members in between
      * must share it too.
      */
-    uint8_t  skip;
+    uint8_t skip;
 
     /** Pointer to the first child node or corresponding rule.
      *
@@ -58,7 +56,8 @@ typedef struct TrieNode {
  * destination address matching the prefix should be sent to this interface
  * (unless overridden by a more specific rule).
  */
-typedef struct Rule {
+typedef struct Rule
+{
     /** CIDR prefix.
      *
      * Only the first `prefix_len` bits are significant. The rest are ignored,
@@ -67,12 +66,11 @@ typedef struct Rule {
     ip_addr_t prefix;
 
     /// Length of the prefix in bits.
-    uint8_t   prefix_len;
+    uint8_t prefix_len;
 
     /// Outgoing interface associated with this rule.
-    uint32_t  out_iface;
+    uint32_t out_iface;
 } Rule;
-
 
 // ==== Function Prototypes ====
 
@@ -85,7 +83,7 @@ typedef struct Rule {
  *
  * @return Pointer to the root node of the LC-Trie.
  */
-TrieNode* create_trie(Rule *rules, size_t num_rules);
+TrieNode *create_trie(Rule *rules, size_t num_rules);
 
 /** Free the memory allocated for the LC-Trie.
  *
@@ -113,17 +111,17 @@ uint32_t lookup_ip(ip_addr_t ip_addr, TrieNode *trie);
 // Not going to add a 'compress_trie' function since the trie is born
 // compressed
 
-//I needed to add them here in order to check my functions in proobs_main.c
-//Rule* parseFibFile(const char* filename, size_t* count);
+// I needed to add them here in order to check my functions in proobs_main.c
+// Rule* parseFibFile(const char* filename, size_t* count);
 
-Rule* sort_rules(Rule *rules, size_t num_rules);
+Rule *sort_rules(Rule *rules, size_t num_rules);
 uint8_t compute_branch(const Rule *group, size_t group_size, uint8_t pre_skip);
 
 uint8_t compute_skip(const Rule *group, size_t group_size, uint8_t pre_skip);
 
 uint32_t extract_bits(uint32_t bitstring, uint8_t start, uint8_t n_bits);
 
-Rule* compute_default(const Rule *group, size_t group_size, uint8_t pre_skip);
+Rule *compute_default(const Rule *group, size_t group_size, uint8_t pre_skip);
 
 bool prefix_match(const Rule *rule, ip_addr_t address);
 
