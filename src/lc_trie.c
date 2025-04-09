@@ -21,11 +21,9 @@
  *  @returns the memory address of the root node of the generated subtrie
  */
 TrieNode *create_subtrie(Rule *group, size_t group_size, uint8_t pre_skip,
-                         TrieNode *node_ptr, Rule *default_rule)
-{
+                         TrieNode *node_ptr, Rule *default_rule) {
     // Base case: single rule in the group
-    if (group_size == 1)
-    {
+    if (group_size == 1) {
         node_ptr->branch = 0;
         node_ptr->skip = 0;
         node_ptr->pointer = (TrieNode *)group; // Store rule directly
@@ -38,8 +36,7 @@ TrieNode *create_subtrie(Rule *group, size_t group_size, uint8_t pre_skip,
 
     // Update default_rule if a suitable one is found
     Rule *new_default = compute_default(group, group_size, pre_skip);
-    if (new_default)
-    {
+    if (new_default) {
         default_rule = new_default;
     }
 
@@ -58,11 +55,9 @@ TrieNode *create_subtrie(Rule *group, size_t group_size, uint8_t pre_skip,
     uint8_t children_skip = pre_skip + skip + branch;
     size_t current_pos = 0;
 
-    for (size_t child_n = 0; child_n < num_children; child_n++)
-    {
+    for (size_t child_n = 0; child_n < num_children; child_n++) {
         size_t subgroup_size = 0;
-        while (current_pos + subgroup_size < group_size)
-        {
+        while (current_pos + subgroup_size < group_size) {
             uint32_t current_prefix = extract_bits(
                 group[current_pos + subgroup_size].prefix,
                 pre_skip + skip,
@@ -74,12 +69,10 @@ TrieNode *create_subtrie(Rule *group, size_t group_size, uint8_t pre_skip,
         }
 
         // Build subtrie for this child
-        if (subgroup_size == 0)
-        {
+        if (subgroup_size == 0) {
             create_subtrie(default_rule, 1, 0, &children[child_n], default_rule);
         }
-        else
-        {
+        else {
             create_subtrie(
                 &group[current_pos], subgroup_size, children_skip,
                 &children[child_n], default_rule);
@@ -104,8 +97,7 @@ TrieNode *create_subtrie(Rule *group, size_t group_size, uint8_t pre_skip,
  *  @return the skip value. If `group_size` is 1, all remaining bits can be
  *      skipped. The absolute maximum value is 32.
  */
-uint8_t compute_skip(const Rule *group, size_t group_size, uint8_t pre_skip)
-{
+uint8_t compute_skip(const Rule *group, size_t group_size, uint8_t pre_skip) {
     if (group_size == 0)
         return 0;
     if (group_size == 1)
@@ -120,8 +112,7 @@ uint8_t compute_skip(const Rule *group, size_t group_size, uint8_t pre_skip)
     ip_addr_t last = group[group_size - 1].prefix & mask;
 
     uint8_t skip = pre_skip;
-    while (skip < min_len)
-    {
+    while (skip < min_len) {
         uint32_t mask_bit = 1 << (31 - skip);
         if ((first & mask_bit) != (last & mask_bit))
             break;
@@ -141,8 +132,7 @@ uint8_t compute_skip(const Rule *group, size_t group_size, uint8_t pre_skip)
  *
  *  @return the branching factor. The absolute maximum value is 32.
  */
-uint8_t compute_branch(const Rule *group, size_t group_size, uint8_t pre_skip)
-{
+uint8_t compute_branch(const Rule *group, size_t group_size, uint8_t pre_skip) {
     if (group_size <= 1) return 0;
 
     uint8_t branch = 1;
@@ -174,8 +164,7 @@ uint8_t compute_branch(const Rule *group, size_t group_size, uint8_t pre_skip)
 }
 
 // Comparison function for sorting rules
-int compare_rules(const void *a, const void *b)
-{
+int compare_rules(const void *a, const void *b) {
     const Rule *rule_a = (const Rule *)a;
     const Rule *rule_b = (const Rule *)b;
 
@@ -204,8 +193,7 @@ int compare_rules(const void *a, const void *b)
  *  @return a pointer to a sorted copy of the array. Its size is the same as the
  *  input.
  */
-Rule *sort_rules(Rule *rules, size_t num_rules)
-{
+Rule *sort_rules(Rule *rules, size_t num_rules) {
     Rule *sorted = malloc(num_rules * sizeof(Rule));
     if (!sorted)
         return NULL;
@@ -230,17 +218,14 @@ Rule *sort_rules(Rule *rules, size_t num_rules)
  *  @return a pointer to the action with the most specific rule which can be
  *  applied to all possible subgroups, or 0 if there is none.
  */
-Rule *compute_default(const Rule *group, size_t group_size, uint8_t pre_skip)
-{
+Rule *compute_default(const Rule *group, size_t group_size, uint8_t pre_skip) {
     if (group_size == 0)
         return NULL;
 
     Rule *default_rule = NULL;
 
-    for (size_t i = 0; i < group_size; i++)
-    {
-        if (group[i].prefix_len <= pre_skip)
-        {
+    for (size_t i = 0; i < group_size; i++) {
+        if (group[i].prefix_len <= pre_skip) {
             default_rule = (Rule *)&group[i];
             break;
         }
@@ -256,8 +241,7 @@ Rule *compute_default(const Rule *group, size_t group_size, uint8_t pre_skip)
  *
  *  @return true if the address matches the rule, false otherwise
  */
-bool prefix_match(const Rule *rule, ip_addr_t address)
-{
+bool prefix_match(const Rule *rule, ip_addr_t address) {
     uint32_t mask = 0xFFFFFFFF << (32 - rule->prefix_len);
     return (address & mask) == (rule->prefix & mask);
 }
@@ -273,16 +257,14 @@ bool prefix_match(const Rule *rule, ip_addr_t address)
  *
  *  @return the extracted bits as an unsigned integer
  */
-uint32_t extract_bits(uint32_t bitstring, uint8_t start, uint8_t n_bits)
-{
+uint32_t extract_bits(uint32_t bitstring, uint8_t start, uint8_t n_bits) {
     uint32_t mask = (1ULL << n_bits) - 1;
     return (bitstring >> start) & (uint32_t)mask;
 }
 
 // ---- Trie initialization ----
 
-TrieNode *create_trie(Rule *rules, size_t num_rules)
-{
+TrieNode *create_trie(Rule *rules, size_t num_rules) {
     if (rules == NULL || num_rules == 0)
         return NULL;
 

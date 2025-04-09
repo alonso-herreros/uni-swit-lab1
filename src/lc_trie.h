@@ -22,8 +22,7 @@ typedef uint32_t ip_addr_t;
  *
  * A node in an LC-Trie. It can be either an internal node or a leaf node.
  */
-typedef struct TrieNode
-{
+typedef struct TrieNode {
     /** Branch number (aka "branching factor").
      *
      * This is the number of bits that are used to branch out from this node.
@@ -56,8 +55,7 @@ typedef struct TrieNode
  * destination address matching the prefix should be sent to this interface
  * (unless overridden by a more specific rule).
  */
-typedef struct Rule
-{
+typedef struct Rule {
     /** CIDR prefix.
      *
      * Only the first `prefix_len` bits are significant. The rest are ignored,

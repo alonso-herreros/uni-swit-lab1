@@ -4,8 +4,7 @@
 #include <stdbool.h>
 
 // Function to print a rule in human-readable format
-void print_rule(const Rule *rule)
-{
+void print_rule(const Rule *rule) {
     printf("%u.%u.%u.%u/%u -> iface %u\n",
            (rule->prefix >> 24) & 0xFF,
            (rule->prefix >> 16) & 0xFF,
@@ -16,18 +15,15 @@ void print_rule(const Rule *rule)
 }
 
 // Function to print an array of rules
-void print_rules(const Rule *rules, size_t count)
-{
-    for (size_t i = 0; i < count; i++)
-    {
+void print_rules(const Rule *rules, size_t count) {
+    for (size_t i = 0; i < count; i++) {
         printf("[%zu] ", i);
         print_rule(&rules[i]);
     }
 }
 
 // Helper function to create a rule
-Rule make_rule(const char *ip, uint8_t len, int iface)
-{
+Rule make_rule(const char *ip, uint8_t len, int iface) {
     Rule r;
     unsigned int a, b, c, d;
     sscanf(ip, "%u.%u.%u.%u", &a, &b, &c, &d);
@@ -38,8 +34,7 @@ Rule make_rule(const char *ip, uint8_t len, int iface)
 }
 
 // Test function for compute_skip
-void test_compute_skip()
-{
+void test_compute_skip() {
     printf("\n=== Testing compute_skip ===\n");
 
     // Test case 1: All rules share first 16 bits
@@ -71,8 +66,7 @@ void test_compute_skip()
 }
 
 // Test function for compute_branch
-void test_compute_branch()
-{
+void test_compute_branch() {
     printf("\n=== Testing compute_branch ===\n");
 
     // Test case 1: Needs 2-bit branching
@@ -105,8 +99,7 @@ void test_compute_branch()
 }
 
 // Test function for sort_rules
-void test_sort_rules()
-{
+void test_sort_rules() {
     printf("\n=== Testing sort_rules ===\n");
 
     // Test case 1: Mixed prefixes with default route
@@ -161,8 +154,7 @@ void test_sort_rules()
 }
 
 // Test function for compute_default
-void test_compute_default()
-{
+void test_compute_default() {
     printf("\n=== Testing compute_default ===\n");
 
     // Test case 1: Has default route
@@ -212,16 +204,14 @@ void test_compute_default()
 }
 
 // Test function for prefix_match
-void test_prefix_match()
-{
+void test_prefix_match() {
     printf("\n=== Testing prefix_match ===\n");
 
     Rule rule = make_rule("192.168.1.0", 24, 1);
     printf("Test rule: ");
     print_rule(&rule);
 
-    struct
-    {
+    struct {
         const char *ip;
         bool expected;
     } test_cases[] = {
@@ -231,8 +221,7 @@ void test_prefix_match()
         {"192.168.2.1", false},
         {"10.0.0.1", false}};
 
-    for (size_t i = 0; i < sizeof(test_cases) / sizeof(test_cases[0]); i++)
-    {
+    for (size_t i = 0; i < sizeof(test_cases) / sizeof(test_cases[0]); i++) {
         uint32_t ip = 0;
         unsigned int a, b, c, d;
         sscanf(test_cases[i].ip, "%u.%u.%u.%u", &a, &b, &c, &d);
@@ -248,14 +237,12 @@ void test_prefix_match()
 }
 
 // Test function for extract_bits
-void test_extract_bits()
-{
+void test_extract_bits() {
     printf("\n=== Testing extract_bits ===\n");
 
     uint32_t test_value = 0xABCDEF12; // Binary: 10101011 11001101 11101111 00010010
 
-    struct
-    {
+    struct {
         uint8_t start;
         uint8_t n_bits;
         uint32_t expected;
@@ -269,8 +256,7 @@ void test_extract_bits()
         {0, 32, 0xABCDEF12} // All bits
     };
 
-    for (size_t i = 0; i < sizeof(test_cases) / sizeof(test_cases[0]); i++)
-    {
+    for (size_t i = 0; i < sizeof(test_cases) / sizeof(test_cases[0]); i++) {
         uint32_t result = extract_bits(test_value, test_cases[i].start, test_cases[i].n_bits);
         printf("Extract %u bits from position %u - Expected: 0x%X, Got: 0x%X - %s\n",
                test_cases[i].n_bits,
@@ -282,8 +268,7 @@ void test_extract_bits()
 }
 
 // Test function for create_trie
-void test_create_trie()
-{
+void test_create_trie() {
     printf("\n=== Testing create_trie ===\n");
 
     // Test case 1: Simple trie with 3 rules
@@ -305,8 +290,7 @@ void test_create_trie()
     free(sorted_rules);
 
     TrieNode *trie = create_trie(sorted_rules, sizeof(rules1) / sizeof(rules1[0]));
-    if (trie == NULL)
-    {
+    if (trie == NULL) {
         printf("FAIL: Trie creation returned NULL\n");
         free(sorted_rules);
         return;
@@ -323,20 +307,17 @@ void test_create_trie()
     // Test case 2: Empty trie
     printf("\nTest Case 2: Empty trie\n");
     TrieNode *empty_trie = create_trie(NULL, 0);
-    if (empty_trie == NULL)
-    {
+    if (empty_trie == NULL) {
         printf("PASS: NULL returned for empty rules (expected behavior)\n");
     }
-    else
-    {
+    else {
         printf("FAIL: Expected NULL for empty rules\n");
         // Liberar solo si create_trie no devolvió NULL
         free(empty_trie);
     }
 }
 
-int main()
-{
+int main() {
     printf("=== LC-Trie Function Test Suite ===\n");
 
     // Run all test functions
