@@ -107,6 +107,8 @@ TrieNode *read_trie() {
     Rule *rules = read_rules(&rule_count);
 
     TrieNode *root = create_trie(rules, rule_count);
+    // Since create_trie creates a copy of the rules, we can free them
+    free(rules);
 
     return root;
 }
