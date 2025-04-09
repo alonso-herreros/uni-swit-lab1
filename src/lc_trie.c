@@ -4,25 +4,27 @@
 #include "utils.h"
 #include <stdio.h>
 
-#define MAX_BRANCH 5 // Limits the branching factor to control memory usage
+// ==== Constants ====
+#define MAX_BRANCH 5 // Limits branching factor to control memory usage
 
-// ==== Trie Construction ====
+// ---- Trie creation ----
 
-/**
- * Recursively builds a compressed trie (LC-trie) from a sorted array of rules.
+/** Recursively creates a subtrie.
  *
- * @param group        Pointer to the first rule of a sorted group.
- * @param group_size   Number of rules in the group.
- * @param pre_skip     Number of bits already skipped in the path.
- * @param node_ptr     Pointer to the allocated TrieNode to fill.
- * @param default_rule Pointer to the current default rule, used for empty subgroups.
+ *  @param group the memory address of the group's first member (a memory
+ *      address in a SORTED base vector)
+ *  @param group_size the number of actions in this group, including the one
+ *      at `group`.
+ *  @param pre_skip the number of bits already skipped and read by parent groups
+ *  @param node_ptr the memory address where the root node of the subtrie should
+ *      be placed. Must have been previously allocated.
  *
- * @return Pointer to the initialized TrieNode, or NULL on failure.
+ *  @returns the memory address of the root node of the generated subtrie
  */
 TrieNode *create_subtrie(Rule *group, size_t group_size, uint8_t pre_skip,
                          TrieNode *node_ptr, Rule *default_rule)
 {
-    // Base case: single rule
+    // Base case: single rule in the group
     if (group_size == 1)
     {
         node_ptr->branch = 0;
@@ -31,34 +33,35 @@ TrieNode *create_subtrie(Rule *group, size_t group_size, uint8_t pre_skip,
         return node_ptr;
     }
 
-    // Determine how many bits can be skipped and how many to branch on
+    // Compute skip and branch values
     uint8_t skip = compute_skip(group, group_size, pre_skip);
     uint8_t branch = compute_branch(group, group_size, pre_skip + skip);
 
-    // Update default rule if a more specific one is found
+    // Update default_rule if a suitable one is found
     Rule *new_default = compute_default(group, group_size, pre_skip);
     if (new_default)
+    {
         default_rule = new_default;
+    }
 
-    // Allocate space for child nodes
+    // Allocate memory for child nodes
     size_t num_children = 1 << branch;
     TrieNode *children = malloc(num_children * sizeof(TrieNode));
     if (!children)
         return NULL;
 
-    // Initialize current node
+    // Set current node's properties
     node_ptr->branch = branch;
     node_ptr->skip = skip;
     node_ptr->pointer = children;
 
+    // Recursively create children
     uint8_t children_skip = pre_skip + skip + branch;
     size_t current_pos = 0;
 
-    // Recursively construct children
     for (size_t child_n = 0; child_n < num_children; child_n++)
     {
         size_t subgroup_size = 0;
-
         while (current_pos + subgroup_size < group_size)
         {
             uint32_t current_prefix = extract_bits(
@@ -71,14 +74,13 @@ TrieNode *create_subtrie(Rule *group, size_t group_size, uint8_t pre_skip,
             subgroup_size++;
         }
 
+        // Build subtrie for this child
         if (subgroup_size == 0)
         {
-            // Empty subgroup: use default rule
             create_subtrie(default_rule, 1, 0, &children[child_n], default_rule);
         }
         else
         {
-            // Recursively create subtree
             create_subtrie(
                 &group[current_pos], subgroup_size, children_skip,
                 &children[child_n], default_rule);
@@ -90,16 +92,18 @@ TrieNode *create_subtrie(Rule *group, size_t group_size, uint8_t pre_skip,
     return node_ptr;
 }
 
-// ==== Supporting Functions ====
+// ---- Dependency functions ----
 
-/**
- * Computes how many bits can be skipped (common prefix length).
+/** Get the length of the largest common prefix in a group of actions.
  *
- * @param group      Pointer to the first rule in the group.
- * @param group_size Number of rules in the group.
- * @param pre_skip   Bits already skipped in the current path.
+ *  @param group the memory address of the group's first member (a memory
+ *      address in a SORTED base vector)
+ *  @param group_size the number of actions in this group, including the one
+ *      at `group`. Must be greater than 0.
+ *  @param pre_skip the number of bits already skipped and read by parent groups
  *
- * @return Number of additional bits that can be skipped.
+ *  @return the skip value. If `group_size` is 1, all remaining bits can be
+ *      skipped. The absolute maximum value is 32.
  */
 uint8_t compute_skip(const Rule *group, size_t group_size, uint8_t pre_skip)
 {
@@ -108,11 +112,9 @@ uint8_t compute_skip(const Rule *group, size_t group_size, uint8_t pre_skip)
     if (group_size == 1)
         return group[0].prefix_len - pre_skip;
 
-    uint8_t min_len = (group[0].prefix_len < group[group_size - 1].prefix_len)
-                          ? group[0].prefix_len
-                          : group[group_size - 1].prefix_len;
-
     uint32_t mask;
+    uint8_t min_len = (group[0].prefix_len < group[group_size - 1].prefix_len) ? group[0].prefix_len : group[group_size - 1].prefix_len;
+
     getNetmask(min_len, &mask);
 
     ip_addr_t first = group[0].prefix & mask;
@@ -121,8 +123,8 @@ uint8_t compute_skip(const Rule *group, size_t group_size, uint8_t pre_skip)
     uint8_t skip = pre_skip;
     while (skip < min_len)
     {
-        uint32_t bit_mask = 1 << (31 - skip);
-        if ((first & bit_mask) != (last & bit_mask))
+        uint32_t mask_bit = 1 << (31 - skip);
+        if ((first & mask_bit) != (last & mask_bit))
             break;
         skip++;
     }
@@ -130,59 +132,49 @@ uint8_t compute_skip(const Rule *group, size_t group_size, uint8_t pre_skip)
     return skip - pre_skip;
 }
 
-/**
- * Determines the optimal branching factor based on fill density.
+/** Get the branch factor for the given group. Depends on FILL_FACTOR.
  *
- * @param group      Pointer to the first rule in the group.
- * @param group_size Number of rules in the group.
- * @param pre_skip   Bits already skipped in the current path.
+ *  @param group the memory address of the group's first member (a memory
+ *      address in a SORTED base vector)
+ *  @param group_size the number of actions in this group, including the one
+ *      at `group`.
+ *  @param pre_skip the number of bits already skipped and read by parent groups
  *
- * @return Number of bits to branch on (max MAX_BRANCH).
+ *  @return the branching factor. The absolute maximum value is 32.
  */
 uint8_t compute_branch(const Rule *group, size_t group_size, uint8_t pre_skip)
 {
-    if (group_size <= 1)
-        return 0;
+    if (group_size <= 1) return 0;
 
     uint8_t branch = 1;
+    
+    while (1) {
+        const uint16_t max_branch_prefixes = 1 << branch; //2^branch
+        uint16_t unique_branch_prefixes = 1; //Start with 1 (group isn't empty)
+        uint32_t last_branch_prefix = extract_bits(group[0].prefix, pre_skip, branch);
 
-    while (branch <= (IP_ADDRESS_LENGTH - pre_skip))
-    {
-        size_t max_combinations = 1 << branch;
-        size_t unique_prefixes = 1;
-        uint32_t last_prefix = extract_bits(group[0].prefix, pre_skip, branch);
-
-        for (size_t i = 1; i < group_size; i++)
-        {
-            uint32_t current = extract_bits(group[i].prefix, pre_skip, branch);
-            if (current != last_prefix)
-            {
-                unique_prefixes++;
-                last_prefix = current;
+        //Count unique branch prefixes at this branch level
+        for (size_t i = 1; i < group_size; i++) {
+            uint32_t current_prefix = extract_bits(group[i].prefix, pre_skip, branch);
+            
+            if (current_prefix != last_branch_prefix) {
+                unique_branch_prefixes++;
             }
+            
+            last_branch_prefix = current_prefix; 
         }
 
-        if ((float)unique_prefixes / (float)max_combinations > FILL_FACTOR)
-        {
-            branch++;
+        //Return when fill factor condition is no longer met
+        if ((float)unique_branch_prefixes / max_branch_prefixes < FILL_FACTOR) {
+            return branch;
         }
-        else
-        {
-            break;
-        }
+
+        branch++;
     }
-
-    return (branch > MAX_BRANCH) ? MAX_BRANCH : branch;
+    return branch;
 }
 
-/**
- * Compares two rules for sorting.
- *
- * @param a Pointer to the first rule.
- * @param b Pointer to the second rule.
- *
- * @return Comparison result for qsort.
- */
+// Comparison function for sorting rules
 int compare_rules(const void *a, const void *b)
 {
     const Rule *rule_a = (const Rule *)a;
@@ -206,13 +198,12 @@ int compare_rules(const void *a, const void *b)
     return rule_a->out_iface - rule_b->out_iface;
 }
 
-/**
- * Returns a new sorted copy of the rules array.
+/** Sort an array of Rules.
  *
- * @param rules      Input array of rules.
- * @param num_rules  Number of rules.
+ *  @param rules the Rule array to sort
  *
- * @return A newly allocated and sorted rule array.
+ *  @return a pointer to a sorted copy of the array. Its size is the same as the
+ *  input.
  */
 Rule *sort_rules(Rule *rules, size_t num_rules)
 {
@@ -222,17 +213,23 @@ Rule *sort_rules(Rule *rules, size_t num_rules)
 
     memcpy(sorted, rules, num_rules * sizeof(Rule));
     qsort(sorted, num_rules, sizeof(Rule), compare_rules);
+
     return sorted;
 }
 
-/**
- * Finds the most specific rule that can serve as a default for all subgroups.
+/** Get the most specific action which applies to all possible subgroups.
  *
- * @param group      Pointer to the first rule in the group.
- * @param group_size Number of rules in the group.
- * @param pre_skip   Bits already skipped in the current path.
+ *  @param group the memory address of the group's first member (a memory
+ *  address in a SORTED base vector)
  *
- * @return Pointer to the most applicable default rule, or NULL.
+ * @param group_size the number of actions in
+ *  this group, including the one at `group`.
+ *
+ * @param pre_skip the number of
+ *  bits already skipped and read by parent groups
+ *
+ *  @return a pointer to the action with the most specific rule which can be
+ *  applied to all possible subgroups, or 0 if there is none.
  */
 Rule *compute_default(const Rule *group, size_t group_size, uint8_t pre_skip)
 {
@@ -253,13 +250,12 @@ Rule *compute_default(const Rule *group, size_t group_size, uint8_t pre_skip)
     return default_rule;
 }
 
-/**
- * Checks if an IP address matches a rule.
+/** Check if an IP address matches a given rule.
  *
- * @param rule    Pointer to the rule to check.
- * @param address IP address to evaluate.
+ *  @param action the rule to check against
+ *  @param address the IP address to check
  *
- * @return True if the address matches the rule, false otherwise.
+ *  @return true if the address matches the rule, false otherwise
  */
 bool prefix_match(const Rule *rule, ip_addr_t address)
 {
@@ -267,14 +263,16 @@ bool prefix_match(const Rule *rule, ip_addr_t address)
     return (address & mask) == (rule->prefix & mask);
 }
 
-/**
- * Extracts a number of bits from a bitstring starting at a given position.
+/** Extract a specific number of bits from a bitstring.
  *
- * @param bitstring Bitstring to extract from.
- * @param start     Starting bit position (0-indexed).
- * @param n_bits    Number of bits to extract.
+ * The bits are extracted and placed in the least significant bits of the
+ * result.
  *
- * @return Extracted bits as an unsigned integer.
+ *  @param bitstring the bitstring to extract from
+ *  @param start the starting position (0-indexed)
+ *  @param n_bits the number of bits to extract
+ *
+ *  @return the extracted bits as an unsigned integer
  */
 uint32_t extract_bits(uint32_t bitstring, uint8_t start, uint8_t n_bits)
 {
@@ -282,16 +280,8 @@ uint32_t extract_bits(uint32_t bitstring, uint8_t start, uint8_t n_bits)
     return (bitstring >> start) & (uint32_t)mask;
 }
 
-// ==== Trie Entry Point ====
+// ---- Trie initialization ----
 
-/**
- * Builds a full trie from a sorted set of rules.
- *
- * @param rules      Pointer to the rule array (assumed sorted).
- * @param num_rules  Number of rules.
- *
- * @return Pointer to the root TrieNode, or NULL on failure.
- */
 TrieNode *create_trie(Rule *rules, size_t num_rules)
 {
     if (rules == NULL || num_rules == 0)
@@ -302,5 +292,6 @@ TrieNode *create_trie(Rule *rules, size_t num_rules)
         return NULL;
 
     create_subtrie(rules, num_rules, 0, root, NULL);
+
     return root;
 }
