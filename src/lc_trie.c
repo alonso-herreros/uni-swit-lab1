@@ -5,7 +5,6 @@
 #include <stdio.h>
 
 // ==== Constants ====
-#define MAX_BITS 32      // Number of bits in an IPv4 address
 #define MAX_BRANCH 5     // Maximum branching factor to limit memory usage
 
 // ==== Auxiliary functions ====
@@ -171,7 +170,7 @@ uint8_t compute_branch(const Rule *group, size_t group_size, uint8_t pre_skip) {
     uint8_t branch = 1;
     
     // Find largest branch where unique prefixes exceed FILL_FACTOR threshold
-    while (branch <= (MAX_BITS - pre_skip)) {
+    while (branch <= (IP_ADDRESS_LENGTH - pre_skip)) {
         size_t max_combinations = 1 << branch;  // 2^branch possible prefixes
         size_t unique_prefixes = 1;
         uint32_t last_prefix = extract_bits(group[0].prefix, pre_skip, branch);
