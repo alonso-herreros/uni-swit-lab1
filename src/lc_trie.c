@@ -71,3 +71,39 @@ uint32_t extract_bits(uint32_t bitstring, uint8_t start, uint8_t n_bits) {
     uint32_t mask = (1 << n_bits) - 1;  // Mask with the n_bits LSBs set to 1
     return (bitstring >> start) & mask; // Shift and apply the mask
 }
+
+
+// ---- Mock implementations for testing ----
+#ifdef MOCK
+#include <stdlib.h>
+
+// WARNING: MOCK IMPLEMENTATION
+TrieNode* create_trie(Rule *rules, size_t num_rules) {
+    TrieNode* root = malloc(sizeof(TrieNode));
+    root->branch = 0;
+    root->skip = 0;
+    root->pointer = NULL;
+
+    return root;
+}
+
+// WARNING: MOCK IMPLEMENTATION
+uint32_t count_nodes_trie(TrieNode *trie) {
+    if (trie == NULL) {
+	return 0;
+    }
+    return 42;  // Indeed
+}
+
+// WARNING: MOCK IMPLEMENTATION
+uint32_t lookup_ip(ip_addr_t ip_addr, TrieNode *trie) {
+    // Mock implementation: always return 0
+    return 1;
+}
+
+// WARNING: MOCK IMPLEMENTATION
+void free_trie(TrieNode *trie) {
+    free(trie);
+}
+
+#endif // MOCK
