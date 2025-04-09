@@ -1,5 +1,4 @@
-#include "io.h"
-#include "lc_trie.h"
+#include "../src/lc_trie.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
