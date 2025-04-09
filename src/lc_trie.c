@@ -8,7 +8,7 @@
 
 // ---- Trie creation ----
 
-/** Recursively creates a subtrie.
+/** Recursively create a subtrie.
  *
  *  @param group the memory address of the group's first member (a memory
  *      address in a SORTED base vector)
