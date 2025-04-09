@@ -6,8 +6,8 @@
 #include <stdbool.h> // For the bool type
 
 // ==== Constants ====
-#define FILL_FACTOR 1 // Determines how densely populated branches must be
 #ifndef FILL_FACTOR
+#define FILL_FACTOR 1 // Determines how densely populated branches must be
 
 #endif
 
