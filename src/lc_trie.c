@@ -287,10 +287,10 @@ Rule *compute_default(const Rule *group, size_t group_size, uint8_t pre_skip)
  */
 bool prefix_match(const Rule *rule, ip_addr_t address)
 {
-    // Create a mask for the prefix length
-    uint32_t mask = (rule->prefix_len == 32) ? 0xFFFFFFFF : (1 << (32 - rule->prefix_len)) - 1 ^ 0xFFFFFFFF;
+    // Crear máscara de prefijo (funciona correctamente para prefix_len entre 0 y 32)
+    uint32_t mask = 0xFFFFFFFF << (32 - rule->prefix_len);
 
-    // Compare the masked portions
+    // Comparar las partes enmascaradas
     return (address & mask) == (rule->prefix & mask);
 }
 
@@ -307,12 +307,8 @@ bool prefix_match(const Rule *rule, ip_addr_t address)
  */
 uint32_t extract_bits(uint32_t bitstring, uint8_t start, uint8_t n_bits)
 {
-    if (n_bits == 0 || n_bits > 32 || start >= 32 || start + n_bits > 32)
-    {
-        return 0; // Validación básica para evitar errores
-    }
-    uint32_t mask = (n_bits == 32) ? 0xFFFFFFFF : ((1U << n_bits) - 1);
-    return (bitstring >> start) & mask;
+    uint32_t mask = (1ULL << n_bits) - 1; // Usamos 64 bits para evitar overflow al desplazar 32
+    return (bitstring >> start) & (uint32_t)mask;
 }
 
 // ---- Lookup ----
