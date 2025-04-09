@@ -7,37 +7,6 @@
 // ==== Constants ====
 #define MAX_BRANCH 5 // Maximum branching factor to limit memory usage
 
-// ==== Auxiliary functions ====
-int compare_rules(const void *a, const void *b)
-{
-    const Rule *rule_a = (const Rule *)a;
-    const Rule *rule_b = (const Rule *)b;
-
-    // Special case: default route (0.0.0.0/0) always comes first
-    if (rule_a->prefix_len == 0 && rule_a->prefix == 0)
-        return -1;
-    if (rule_b->prefix_len == 0 && rule_b->prefix == 0)
-        return 1;
-
-    // First compare the prefix values
-    if (rule_a->prefix < rule_b->prefix)
-        return -1;
-    if (rule_a->prefix > rule_b->prefix)
-        return 1;
-
-    // For equal prefixes, shorter prefix lengths come first
-    if (rule_a->prefix_len < rule_b->prefix_len)
-        return -1;
-    if (rule_a->prefix_len > rule_b->prefix_len)
-        return 1;
-
-    // If prefix and length are equal, compare interfaces (stable sort)
-    return rule_a->out_iface - rule_b->out_iface;
-}
-
-// ==== Data Structures ====
-
-// ==== Function Prototypes ====
 
 // ---- Trie creation ----
 
@@ -232,6 +201,34 @@ uint8_t compute_branch(const Rule *group, size_t group_size, uint8_t pre_skip)
  */
 // Función de comparación para qsort
 // Función de comparación con getNetmask
+
+// ==== Auxiliary function ====
+int compare_rules(const void *a, const void *b)
+{
+    const Rule *rule_a = (const Rule *)a;
+    const Rule *rule_b = (const Rule *)b;
+
+    // Special case: default route (0.0.0.0/0) always comes first
+    if (rule_a->prefix_len == 0 && rule_a->prefix == 0)
+        return -1;
+    if (rule_b->prefix_len == 0 && rule_b->prefix == 0)
+        return 1;
+
+    // First compare the prefix values
+    if (rule_a->prefix < rule_b->prefix)
+        return -1;
+    if (rule_a->prefix > rule_b->prefix)
+        return 1;
+
+    // For equal prefixes, shorter prefix lengths come first
+    if (rule_a->prefix_len < rule_b->prefix_len)
+        return -1;
+    if (rule_a->prefix_len > rule_b->prefix_len)
+        return 1;
+
+    // If prefix and length are equal, compare interfaces (stable sort)
+    return rule_a->out_iface - rule_b->out_iface;
+}
 
 Rule *sort_rules(Rule *rules, size_t num_rules)
 {
