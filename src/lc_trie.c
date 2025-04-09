@@ -5,7 +5,6 @@
 #include <stdio.h>
 
 // ==== Constants ====
-#define MAX_BRANCH 5 // Limits branching factor to control memory usage
 
 // ---- Trie creation ----
 
