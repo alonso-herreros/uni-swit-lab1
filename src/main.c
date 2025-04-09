@@ -4,6 +4,13 @@
 #include <stdint.h>
 #include <time.h> // For time measurements
 
+// Macro for debug printing
+#ifdef DEBUG
+#define DEBUG_PRINT(fmt, ...) fprintf(stdout, "[DEBUG] " fmt, ##__VA_ARGS__)
+#else
+#define DEBUG_PRINT(...) do {} while (0)
+#endif
+
 // ==== Constants ====
 #define OUT_PREFIX ".out"
 #define OUT_PREFIX_LEN 4
@@ -62,22 +69,27 @@ int main(int argc, char *argv[]) {
         printIOExplanationError(status);
         return 1;
     }
+    DEBUG_PRINT("I/O init done\n");
 
+    DEBUG_PRINT("Reading FIB start\n");
     // Attempt to create the trie from the FIB file
     root = read_trie();
     if (!root) {
         printIOExplanationError(PARSE_ERROR);
         return 1;
     }
+    DEBUG_PRINT("FIB read done\n");
 
     // Accumulators for search time and memory accesses
     double total_search_time = 0;  // Total time spent in lookups
     int total_access_count = 0;    // Total number of 'table accesses'
     int i = 0;                     // Total number of addresses processed
 
+    DEBUG_PRINT("Ready to process Input\n");
     // Process the input packet file
     ip_addr_t addr;
     for (i=0; (status=readInputPacketFileLine(&addr)) != REACHED_EOF; i++) {
+        DEBUG_PRINT("Processing input line %d\n", i);
         if (status != OK) {
             printIOExplanationError(status); // Could be BAD_INPUT_FILE
             return 1;
@@ -88,27 +100,37 @@ int main(int argc, char *argv[]) {
             return 1;
         }
     }
+    DEBUG_PRINT("Input processing done\n");
 
+    DEBUG_PRINT("Summary start\n");
     // Print the summary information
     int node_count = count_nodes_trie(root);
     double avg_access_count = (double)total_access_count / i;
     double avg_search_time = total_search_time / i;
     printSummary(node_count, i, avg_access_count, avg_search_time);
+    DEBUG_PRINT("Summary done\n");
 
+    DEBUG_PRINT("Clean up start\n");
     // Clean up
     freeIO();
     free_trie(root);
+
+    DEBUG_PRINT("Clean up done\n");
 
     return 0;
 }
 
 TrieNode *read_trie() {
+    DEBUG_PRINT("Read trie enter\n");
     int rule_count = 0;
     Rule *rules = read_rules(&rule_count);
+    DEBUG_PRINT("Read rules done\n");
 
     TrieNode *root = create_trie(rules, rule_count);
+    DEBUG_PRINT("Create trie done\n");
     // Since create_trie creates a copy of the rules, we can free them
     free(rules);
+    DEBUG_PRINT("Free rules done\n");
 
     return root;
 }
@@ -122,6 +144,7 @@ Rule *read_rules(int *rule_count) {
     size_t capacity = 2;
     size_t size = 0;
     Rule* rules = malloc(sizeof(Rule) * capacity);
+    DEBUG_PRINT("Malloc rules done, capacity %zu\n", capacity);
 
     ip_addr_t addr;
     int prefix_len;
@@ -132,10 +155,12 @@ Rule *read_rules(int *rule_count) {
             free(rules);
             return NULL;
         }
+        DEBUG_PRINT("Read rule %zu: %u/%d %d\n", size, addr, prefix_len, out_iface);
 
         if (size == capacity) { // Next element would overflow
             capacity *= 2;
             rules = realloc(rules, sizeof(Rule) * capacity);
+            DEBUG_PRINT("Realloc rules done, new capacity %zu\n", capacity);
         }
 
         rules[size].prefix = addr;
