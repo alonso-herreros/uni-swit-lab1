@@ -287,11 +287,6 @@ Rule *compute_default(const Rule *group, size_t group_size, uint8_t pre_skip)
  */
 bool prefix_match(const Rule *rule, ip_addr_t address)
 {
-    if (rule == NULL || rule->prefix_len == 0)
-    {
-        return false;
-    }
-
     // Create a mask for the prefix length
     uint32_t mask = (rule->prefix_len == 32) ? 0xFFFFFFFF : (1 << (32 - rule->prefix_len)) - 1 ^ 0xFFFFFFFF;
 
