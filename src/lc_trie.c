@@ -5,7 +5,6 @@
 #include <stdio.h>
 
 // ==== Constants ====
-#define FILL_FACTOR 0.5  // Determines how densely populated branches must be
 #define MAX_BITS 32      // Number of bits in an IPv4 address
 #define MAX_BRANCH 5     // Maximum branching factor to limit memory usage
 

@@ -7,7 +7,7 @@
 
 
 // ==== Constants ====
-
+#define FILL_FACTOR 0.5  // Determines how densely populated branches must be
 #ifndef FILL_FACTOR
 
 #endif
