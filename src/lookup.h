@@ -46,4 +46,14 @@ typedef struct TrieNode
     void *pointer;
 } TrieNode;
 
+typedef struct {
+    uint32_t prefix;
+    uint8_t prefix_len;
+    int out_port;
+} LeafNode;
+
+int check_prefix(uint32_t ip_addr, uint32_t target, uint8_t prefix_len);
+uint32_t extract_bits(uint32_t bitstring, uint8_t start, uint8_t n_bits);
+int lookup(uint32_t ip_addr, TrieNode *trie, int default_port);
+
 #endif
