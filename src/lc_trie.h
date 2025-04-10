@@ -117,8 +117,6 @@ uint8_t compute_branch(const Rule *group, size_t group_size, uint8_t pre_skip);
 
 uint8_t compute_skip(const Rule *group, size_t group_size, uint8_t pre_skip);
 
-uint32_t extract_bits(uint32_t bitstring, uint8_t start, uint8_t n_bits);
-
 Rule *compute_default(const Rule *group, size_t group_size, uint8_t pre_skip);
 
 bool prefix_match(const Rule *rule, ip_addr_t address);

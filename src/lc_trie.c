@@ -58,7 +58,7 @@ TrieNode *create_subtrie(Rule *group, size_t group_size, uint8_t pre_skip,
     for (size_t child_n = 0; child_n < num_children; child_n++) {
         size_t subgroup_size = 0;
         while (current_pos + subgroup_size < group_size) {
-            uint32_t current_prefix = extract_bits(
+            uint32_t current_prefix = extract_msb(
                 group[current_pos + subgroup_size].prefix,
                 pre_skip + skip,
                 branch);
@@ -140,11 +140,11 @@ uint8_t compute_branch(const Rule *group, size_t group_size, uint8_t pre_skip) {
     while (1) {
         const uint16_t max_branch_prefixes = 1 << branch; //2^branch
         uint16_t unique_branch_prefixes = 1; //Start with 1 (group isn't empty)
-        uint32_t last_branch_prefix = extract_bits(group[0].prefix, pre_skip, branch);
+        uint32_t last_branch_prefix = extract_msb(group[0].prefix, pre_skip, branch);
 
         //Count unique branch prefixes at this branch level
         for (size_t i = 1; i < group_size; i++) {
-            uint32_t current_prefix = extract_bits(group[i].prefix, pre_skip, branch);
+            uint32_t current_prefix = extract_msb(group[i].prefix, pre_skip, branch);
             
             if (current_prefix != last_branch_prefix) {
                 unique_branch_prefixes++;
@@ -244,22 +244,6 @@ Rule *compute_default(const Rule *group, size_t group_size, uint8_t pre_skip) {
 bool prefix_match(const Rule *rule, ip_addr_t address) {
     uint32_t mask = 0xFFFFFFFF << (32 - rule->prefix_len);
     return (address & mask) == (rule->prefix & mask);
-}
-
-/** Extract a specific number of bits from a bitstring.
- *
- * The bits are extracted and placed in the least significant bits of the
- * result.
- *
- *  @param bitstring the bitstring to extract from
- *  @param start the starting position (0-indexed)
- *  @param n_bits the number of bits to extract
- *
- *  @return the extracted bits as an unsigned integer
- */
-uint32_t extract_bits(uint32_t bitstring, uint8_t start, uint8_t n_bits) {
-    uint32_t mask = (1ULL << n_bits) - 1;
-    return (bitstring >> start) & (uint32_t)mask;
 }
 
 // ---- Trie initialization ----

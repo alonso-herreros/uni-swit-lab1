@@ -302,50 +302,6 @@ int test_prefix_match() {
     return fails;
 }
 
-// Wrapper function for extract_bits
-int _test_extract_bits(uint32_t value, uint8_t start,
-        uint8_t n_bits, uint32_t expected) {
-    uint32_t result = extract_bits(value, start, n_bits);
-    printf("0x%X: Extract %u bits starting at %u - Expected: 0x%X, Got: 0x%X\n",
-           value, n_bits, start, result, expected);
-    if (result != expected) {
-        TEST_FAIL("Expected: 0x%X, Got: 0x%X\n", expected, result);
-    }
-    return 0;
-}
-
-// Test collection for extract_bits
-int test_extract_bits() {
-    printf("\n=== Testing extract_bits ===\n");
-    int fails = 0;
-
-    uint32_t test_value = 0xABCDEF12; // Binary: 10101011 11001101 11101111 00010010
-
-    struct {
-        uint8_t start;
-        uint8_t n_bits;
-        uint32_t expected;
-    } cases[] = {
-        {0, 4, 0x2},        // Last 4 bits
-        {4, 8, 0xF1},       // Next byte
-        {16, 8, 0xCD},      // Third byte
-        {24, 8, 0xAB},      // First byte
-        {8, 12, 0xDEF},     // Middle 12 bits
-        {5, 3, 0x0},        // 3 bits starting at 5
-        {0, 32, 0xABCDEF12} // All bits
-    };
-
-    for (size_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
-        printf("\n--- Test Case %zu ---\n", i + 1);
-
-        fails += _test_extract_bits(test_value,
-            cases[i].start, cases[i].n_bits, cases[i].expected);
-    }
-
-    TEST_REPORT("extract_bits", fails);
-
-    return fails;
-}
 
 // Auxiliary function to automate node comparison
 int _inspect_node(TrieNode *node, TrieNode *expected) {
@@ -506,7 +462,6 @@ int main() {
     fails += test_sort_rules();
     fails += test_compute_default();
     fails += test_prefix_match();
-    fails += test_extract_bits();
     fails += test_create_trie();
 
     TEST_REPORT("ALL", fails);
