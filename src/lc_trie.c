@@ -3,8 +3,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-// ==== Constants ====
-
 // ---- Trie creation ----
 
 /** Recursively create a subtrie.
@@ -261,3 +259,27 @@ TrieNode *create_trie(Rule *rules, size_t num_rules) {
 
     return root;
 }
+
+// ---- Mock implementations for testing ----
+
+#ifdef MOCK
+// WARNING: MOCK IMPLEMENTATION
+uint32_t count_nodes_trie(TrieNode *trie) {
+    if (trie == NULL) {
+        return 0;
+    }
+    return 42;  // Indeed
+}
+
+// WARNING: MOCK IMPLEMENTATION
+uint32_t lookup_ip(ip_addr_t ip_addr, TrieNode *trie) {
+    // Mock implementation: always return 0
+    return 1;
+}
+
+// WARNING: MOCK IMPLEMENTATION
+void free_trie(TrieNode *trie) {
+    free(trie);
+}
+
+#endif // MOCK
