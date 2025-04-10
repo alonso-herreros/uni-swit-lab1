@@ -390,8 +390,10 @@ int test_create_trie() {
 
 // Test wrapper for lookup
 int _test_lookup(ip_addr_t ip, TrieNode *trie, int expected) {
-    int result = lookup_ip(ip, trie);
-    printf("IP: %08X -> Result: %d (Expected: %d)\n\n", ip, result, expected);
+    int access_count = 0;
+    int result = lookup_ip(ip, trie, &access_count);
+    printf("IP: %08X -> Result: %d (Expected: %d) in %d accesses\n",
+            ip, result, expected, access_count);
 
     if (result != expected) {
         TEST_FAIL("Wrong match\n");
@@ -479,8 +481,7 @@ int test_lookup() {
     printf("\n=== Running lookup tests ===\n");
     for (int i = 0; i < sizeof(tests) / sizeof(tests[0]); i++)
     {
-        printf("--- Test Case %d: ", i+1 );
-        printf("%s ---\n", tests[i].description);
+        printf("\n--- Test Case %d: %s ---\n", i+1, tests[i].description);
         fails += _test_lookup(tests[i].ip, trie, tests[i].expected);
     }
 

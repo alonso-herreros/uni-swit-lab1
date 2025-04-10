@@ -101,11 +101,13 @@ uint32_t count_nodes_trie(TrieNode *trie);
  *
  * @param ip_addr The IP address to look up.
  * @param trie Pointer to the root node of the LC-Trie.
+ * @param[out] access_count Number of node accesses during the lookup. Will be
+ *      overwritten, not added to. Pass NULL to ignore.
  *
  * @return The outgoing interface associated with the longest matching prefix,
  *      or 0 if no rules match.
  */
-uint32_t lookup_ip(ip_addr_t ip_addr, TrieNode *trie);
+uint32_t lookup_ip(ip_addr_t ip_addr, TrieNode *trie, int *access_count);
 
 // Not going to add a 'compress_trie' function since the trie is born
 // compressed
