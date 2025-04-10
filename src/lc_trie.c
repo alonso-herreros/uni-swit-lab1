@@ -105,7 +105,7 @@ uint8_t compute_skip(const Rule *group, size_t group_size, uint8_t pre_skip) {
     uint32_t mask;
     uint8_t min_len = (group[0].prefix_len < group[group_size - 1].prefix_len) ? group[0].prefix_len : group[group_size - 1].prefix_len;
 
-    getNetmask(min_len, &mask);
+    getNetmask(min_len, (int *) &mask);
 
     ip_addr_t first = group[0].prefix & mask;
     ip_addr_t last = group[group_size - 1].prefix & mask;
