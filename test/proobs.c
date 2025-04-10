@@ -260,8 +260,8 @@ int test_compute_default() {
     return fails;
 }
 
-// Wrapper function for prefix_match
-int _test_prefix_match(Rule *rule, const char *ip_str, bool expected) {
+// Wrapper function for rule_match
+int _test_rule_match(Rule *rule, const char *ip_str, bool expected) {
     printf("Testing '%s' against rule: ", ip_str);
     print_rule(rule);
 
@@ -270,7 +270,7 @@ int _test_prefix_match(Rule *rule, const char *ip_str, bool expected) {
     sscanf(ip_str, "%u.%u.%u.%u", &a, &b, &c, &d);
     ip = (a << 24) | (b << 16) | (c << 8) | d;
 
-    bool match = prefix_match(rule, ip);
+    bool match = rule_match(rule, ip);
     printf("Match: %s (expected: %s)\n",
         match ? "true" : "false",
         expected ? "true" : "false");
@@ -282,9 +282,9 @@ int _test_prefix_match(Rule *rule, const char *ip_str, bool expected) {
     return 0;
 }
 
-// Test collection for prefix_match
-int test_prefix_match() {
-    printf("\n=== Testing prefix_match ===\n");
+// Test collection for rule_match
+int test_rule_match() {
+    printf("\n=== Testing rule_match ===\n");
     int fails = 0;
 
     Rule rule = make_rule("192.168.1.0", 24, 1);
@@ -301,10 +301,10 @@ int test_prefix_match() {
 
     for (size_t i = 0; i < 5; i++) {
         printf("\n--- Test Case %zu ---\n", i + 1);
-        fails += _test_prefix_match(&rule, cases[i].ip, cases[i].expected);
+        fails += _test_rule_match(&rule, cases[i].ip, cases[i].expected);
     }
 
-    TEST_REPORT("prefix_match", fails);
+    TEST_REPORT("rule_match", fails);
 
     return fails;
 }
@@ -700,7 +700,7 @@ int main() {
     fails += test_compute_branch();
     fails += test_sort_rules();
     fails += test_compute_default();
-    fails += test_prefix_match();
+    fails += test_rule_match();
     fails += test_create_trie();
     fails += test_lookup();
 

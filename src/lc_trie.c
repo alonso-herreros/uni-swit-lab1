@@ -287,11 +287,24 @@ Rule *compute_default(const Rule *group, size_t group_size, uint8_t pre_skip) {
  *
  *  @return true if the address matches the rule, false otherwise
  */
-bool prefix_match(const Rule *rule, ip_addr_t address) {
-    // Masking the shift distance with 31 ensures we don't try to shift by more
-    // than 31 bits, which would be undefined behavior.
-    uint32_t mask = 0xFFFFFFFF << ((32 - rule->prefix_len) & 31);
-    return (address & mask) == (rule->prefix & mask);
+inline bool rule_match(const Rule *rule, ip_addr_t address) {
+    return prefix_match(rule->prefix, address, rule->prefix_len);
+}
+
+/** Check if two IP addresses share a length of prefix.
+ *
+ *  @param ip1 the first IP address for comparison
+ *  @param ip2 the second IP address for comparison
+ *  @param len the length of the prefix to check
+ *
+ *  @return true if the addresses share the prefix, false otherwise
+ */
+inline bool prefix_match(ip_addr_t ip1, ip_addr_t ip2, uint8_t len) {
+    if (len == 0)
+        return true; // Empty prefix matches everything
+
+    uint32_t mask = 0xFFFFFFFF << (32 - len);
+    return (ip1 & mask) == (ip2 & mask);
 }
 
 // ---- Trie initialization ----
@@ -354,7 +367,7 @@ uint32_t lookup_ip(ip_addr_t ip_addr, TrieNode *trie, int *access_count) {
     DEBUG_PRINT("  Checking against 0x%08X/%hhu (rule at %p)\n",
             match->prefix, match->prefix_len, match);
 
-    uint32_t out_iface = prefix_match(match, ip_addr) ? match->out_iface : 0;
+    uint32_t out_iface = rule_match(match, ip_addr) ? match->out_iface : 0;
 
     DEBUG_PRINT("    %s\n", out_iface ? "Match" : "No match");
     DEBUG_PRINT("--Done looking IP up: 0x%08X -> %d\n", ip_addr, out_iface);
