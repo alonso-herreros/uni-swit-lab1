@@ -371,7 +371,7 @@ int test_create_trie() {
     fails += _inspect_node(child22, &expected_child22);
 
     free(sorted1);
-    /* free_trie(trie); */
+    free_trie(trie);
 
     // Test case 2
     printf("\n--- Test Case 2: Empty trie ---\n");
