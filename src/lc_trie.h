@@ -1,11 +1,15 @@
-#ifndef LOOKUP_H
-#define LOOKUP_H
+#ifndef LC_TRIE_H
+#define LC_TRIE_H
 
 #include <stddef.h>  // For size_t, among others?
 #include <stdint.h>  // For fixed-width integer types like uint32_t
 #include <stdbool.h> // For the bool type
 
+// ==== Constants ====
+#ifndef FILL_FACTOR
+#define FILL_FACTOR 1 // Determines how densely populated branches must be
 
+#endif
 
 // ==== Data Types ====
 
@@ -18,8 +22,7 @@ typedef uint32_t ip_addr_t;
  *
  * A node in an LC-Trie. It can be either an internal node or a leaf node.
  */
-typedef struct TrieNode
-{
+typedef struct TrieNode {
     /** Branch number (aka "branching factor").
      *
      * This is the number of bits that are used to branch out from this node.
@@ -67,8 +70,56 @@ typedef struct Rule {
     uint32_t out_iface;
 } Rule;
 
-int check_prefix(uint32_t ip_addr, uint32_t target, uint8_t prefix_len);
-uint32_t extract_bits(uint32_t bitstring, uint8_t start, uint8_t n_bits);
-int lookup(uint32_t ip_addr, TrieNode *trie, int default_port);
+// ==== Function Prototypes ====
 
-#endif
+// TODO: complete these docs
+
+/** Create an LC-Trie from a set of rules.
+ *
+ * @param rules Pointer to an array of rules.
+ * @param num_rules Number of rules in the array.
+ *
+ * @return Pointer to the root node of the LC-Trie.
+ */
+TrieNode *create_trie(Rule *rules, size_t num_rules);
+
+/** Free the memory allocated for the LC-Trie.
+ *
+ * @param trie Pointer to the root node of the LC-Trie.
+ */
+void free_trie(TrieNode *trie);
+
+/** Count the total number of nodes in a given LC-Trie.
+ *
+ * @param trie Pointer to the root node of the LC-Trie.
+ *
+ * @return The total number of nodes in the LC-Trie.
+ */
+uint32_t count_nodes_trie(TrieNode *trie);
+
+/** Look up an IP address in the given LC-Trie and return the next out port.
+ *
+ * @param ip_addr The IP address to look up.
+ * @param trie Pointer to the root node of the LC-Trie.
+ *
+ * @return The outgoing interface associated with the longest matching prefix,
+ *      or 0 if no rules match.
+ */
+uint32_t lookup(ip_addr_t ip_addr, TrieNode *trie);
+
+// Not going to add a 'compress_trie' function since the trie is born
+// compressed
+
+// I needed to add them here in order to check my functions in proobs_main.c
+// Rule* parseFibFile(const char* filename, size_t* count);
+
+Rule *sort_rules(Rule *rules, size_t num_rules);
+uint8_t compute_branch(const Rule *group, size_t group_size, uint8_t pre_skip);
+
+uint8_t compute_skip(const Rule *group, size_t group_size, uint8_t pre_skip);
+
+Rule *compute_default(const Rule *group, size_t group_size, uint8_t pre_skip);
+
+bool prefix_match(const Rule *rule, ip_addr_t address);
+
+#endif // LC_TRIE_H
