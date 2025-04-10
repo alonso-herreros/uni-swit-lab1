@@ -3,6 +3,434 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
+// ==== Macros ====
+#define TEST_FAIL(format, ...) \
+    do { \
+        printf("! TEST FAIL ! " format, ##__VA_ARGS__); \
+        return 1; \
+    } while (0)
+#define TEST_REPORT(name, fails) \
+    do { \
+        if (fails == 0) printf("\n=== Test " name ": all passed ===\n"); \
+        else printf("\n!!! Test " name ": %d FAILED !!!\n", fails); \
+    } while (0)
+
+// ==== Prototypes ====
+
+Rule make_rule(const char *ip, uint8_t len, int iface);
+void print_rules(const Rule *rules, size_t count);
+void print_rule(const Rule *rule);
+int eq_rules(const Rule *a, const Rule *b);
+
+void print_node(const TrieNode *node);
+int eq_nodes(const TrieNode *a, const TrieNode *b);
+
+
+// ==== Test functions ====
+
+// Test wrapper for compute_skip
+int _test_compute_skip(Rule *rules, size_t num_rules, uint8_t pre_skip,
+        int expected) {
+    print_rules(rules, num_rules);
+    uint8_t skip = compute_skip(rules, num_rules, pre_skip);
+    printf("Computed skip, skipping %u: %u bits (expected %u)\n",
+        pre_skip, skip, expected);
+    if (skip != expected)
+        TEST_FAIL("Expected skip: %u, got: %u\n", expected, skip);
+    else
+        return 0;
+}
+
+// Test collection for compute_skip
+int test_compute_skip() {
+    printf("\n=== Testing compute_skip ===\n");
+    int fails = 0;
+
+    // Test case 1
+    printf("\n--- Test Case 1 (Common 22 bits) ---\n");
+
+    Rule rules1[] = {
+        make_rule("192.168.1.0", 24, 1),
+        make_rule("192.168.2.0", 24, 2),
+        make_rule("192.168.3.0", 24, 3)
+    };
+    fails += _test_compute_skip(rules1, 3, 0, 22);
+
+    // Test case 2
+    printf("\n--- Test Case 2 (Different first bit) ---\n");
+    Rule rules2[] = {
+        make_rule("10.0.0.0", 8, 1),
+        make_rule("192.168.0.0", 16, 2)
+    };
+    fails += _test_compute_skip(rules2, 2, 0, 0);
+
+    // Test case 3
+    printf("\n--- Test Case 3 (Single rule) ---\n");
+    fails += _test_compute_skip(rules1, 1, 0, 24);
+
+    TEST_REPORT("compute_skip", fails);
+
+    return fails;
+}
+
+
+// Test wrapper for compute_branch
+int _test_compute_branch(Rule *rules, size_t num_rules,
+        uint8_t pre_skip, int expected) {
+    print_rules(rules, num_rules);
+    uint8_t branch = compute_branch(rules, num_rules, pre_skip);
+    printf("Computed branch skipping %u: %u bits (expected %u)\n",
+        pre_skip, branch, expected);
+    if (branch != expected)
+        TEST_FAIL("Expected branch: %u, got: %u\n", expected, branch);
+    else
+        return 0;
+}
+
+// Test function for compute_branch
+int test_compute_branch() {
+    printf("\n=== Testing compute_branch ===\n");
+    int fails = 0;
+
+    // Test case 1
+    printf("\n--- Test Case 1 (4 rules with different 3rd octet) ---\n");
+    Rule rules1[] = {
+        make_rule("192.168.0.0", 24, 1),
+        make_rule("192.168.1.0", 24, 2),
+        make_rule("192.168.2.0", 24, 3),
+        make_rule("192.168.3.0", 24, 4)};
+    fails += _test_compute_branch(rules1, 4, 22, 2);
+
+    // Test case 2
+    printf("\n--- Test Case 2 (Single rule) ---\n");
+    fails += _test_compute_branch(rules1, 1, 0, 0);
+
+    // Test case 3
+    printf("\n--- Test Case 3 (2 rules with different MSB in 3rd octet) ---\n");
+    Rule rules3[] = {
+        make_rule("192.168.1.0", 24, 1),
+        make_rule("192.168.129.0", 24, 2)};
+    fails += _test_compute_branch(rules3, 2, 16, 1);
+
+    TEST_REPORT("compute_skip", fails);
+
+    return fails;
+}
+
+// Wrapper function for sort_rules
+int _test_sort_rules(Rule *rules, size_t num_rules, Rule *expected) {
+    printf("Original rules:\n");
+    print_rules(rules, num_rules);
+
+    Rule *sorted = sort_rules(rules, num_rules);
+    printf("Sorted rules:\n");
+    print_rules(sorted, num_rules);
+
+    for (size_t i = 0; i < num_rules; i++) {
+        if (!eq_rules(&sorted[i], &expected[i])) {
+            TEST_FAIL("Wrong rule ordering\n");
+        }
+    }
+
+    free(sorted);
+
+    return 0;
+}
+
+// Test function for sort_rules
+int test_sort_rules() {
+    printf("\n=== Testing sort_rules ===\n");
+    int fails = 0;
+
+    // Test case 1
+    printf("\n--- Test Case 1 (Mixed prefixes with default route) ---\n");
+    Rule test1[] = {
+        make_rule("192.168.1.0", 24, 1),
+        make_rule("0.0.0.0", 0, 2), // Default route
+        make_rule("10.0.0.0", 8, 3),
+        make_rule("192.168.0.0", 16, 4),
+        make_rule("192.168.0.0", 24, 5), // Same network, longer prefix
+        make_rule("10.0.0.0", 16, 6)     // Same network, longer prefix
+    };
+    Rule sorted1[] = {
+        make_rule("0.0.0.0", 0, 2),      // Default route
+        make_rule("10.0.0.0", 8, 3),
+        make_rule("10.0.0.0", 16, 6),    // Same network, longer prefix
+        make_rule("192.168.0.0", 16, 4),
+        make_rule("192.168.0.0", 24, 5), // Same network, longer prefix
+        make_rule("192.168.1.0", 24, 1)
+    };
+    fails += _test_sort_rules(test1, sizeof(test1) / sizeof(test1[0]), sorted1);
+
+    // Test case 2
+    printf("\n--- Test Case 2 (Same network, different prefix lengths) ---\n");
+    Rule test2[] = {
+        make_rule("192.168.1.0", 28, 1),
+        make_rule("192.168.1.0", 24, 2),
+        make_rule("192.168.1.0", 16, 3),
+        make_rule("192.168.1.0", 32, 4)
+    };
+    Rule sorted2[] = {
+        make_rule("192.168.1.0", 16, 3),
+        make_rule("192.168.1.0", 24, 2),
+        make_rule("192.168.1.0", 28, 1),
+        make_rule("192.168.1.0", 32, 4)
+    };
+    fails += _test_sort_rules(test2, sizeof(test2) / sizeof(test2[0]), sorted2);
+
+    // Test case 3 (how did we get here?)
+    printf("\n--- Test Case 3 (Multiple default routes) ---\n");
+    Rule test3[] = {
+        make_rule("0.0.0.0", 0, 2),
+        make_rule("0.0.0.0", 0, 1), // Same default, different interface
+        make_rule("10.0.0.0", 8, 3)
+    };
+    Rule sorted3[] = {
+        make_rule("0.0.0.0", 0, 2),
+        make_rule("0.0.0.0", 0, 1), // Same default, different interface
+        make_rule("10.0.0.0", 8, 3)
+    };
+    fails += _test_sort_rules(test3, sizeof(test3) / sizeof(test3[0]), sorted3);
+
+    TEST_REPORT("sort_rules", fails);
+
+    return fails;
+}
+
+// Wrapper function for compute_default
+int _test_compute_default(Rule *rules, size_t num_rules,
+        uint8_t pre_skip, Rule *expected) {
+    printf("Input rules:\n");
+    print_rules(rules, num_rules);
+
+    Rule *default_rule = compute_default(rules, num_rules, pre_skip);
+    printf("Default rule: ");
+    if (default_rule)  print_rule(default_rule);
+    else  printf("None\n");
+
+    if (default_rule != expected && !eq_rules(default_rule, expected)) {
+        TEST_FAIL("Wrong default rule\n");
+    }
+
+    return 0;
+}
+
+// Test collection for compute_default
+int test_compute_default() {
+    printf("\n=== Testing compute_default ===\n");
+    int fails = 0;
+
+    // Test case 1
+    printf("\n--- Test Case 1 (With default route) ---\n");
+    Rule rules1[] = {
+        make_rule("0.0.0.0", 0, 1), // Default route
+        make_rule("192.168.1.0", 24, 2),
+        make_rule("192.168.0.0", 16, 3)
+    };
+
+    fails += _test_compute_default(rules1, 3, 0, &(rules1[0]));
+
+    // Test case 2
+    printf("\n--- Test Case 2 (No default route) ---\n");
+    Rule rules2[] = {
+        make_rule("192.168.1.0", 24, 1),
+        make_rule("192.168.0.0", 16, 2)};
+
+    fails += _test_compute_default(rules2, 2, 0, NULL);
+
+    // Test case 3
+    printf("\n--- Test Case 3 (Default at end) ---\n");
+    Rule rules3[] = {
+        make_rule("192.168.1.0", 24, 1),
+        make_rule("192.168.0.0", 16, 2),
+        make_rule("0.0.0.0", 0, 3) // Default route at end
+    };
+
+    fails += _test_compute_default(rules3, 3, 0, &(rules3[2]));
+
+    TEST_REPORT("compute_default", fails);
+
+    return fails;
+}
+
+// Wrapper function for prefix_match
+int _test_prefix_match(Rule *rule, const char *ip_str, bool expected) {
+    printf("Testing '%s' against rule: ", ip_str);
+    print_rule(rule);
+
+    ip_addr_t ip = 0;
+    unsigned int a, b, c, d;
+    sscanf(ip_str, "%u.%u.%u.%u", &a, &b, &c, &d);
+    ip = (a << 24) | (b << 16) | (c << 8) | d;
+
+    bool match = prefix_match(rule, ip);
+    printf("Match: %s (expected: %s)\n",
+        match ? "true" : "false",
+        expected ? "true" : "false");
+
+    if (match != expected) {
+        TEST_FAIL("\n");
+    }
+
+    return 0;
+}
+
+// Test collection for prefix_match
+int test_prefix_match() {
+    printf("\n=== Testing prefix_match ===\n");
+    int fails = 0;
+
+    Rule rule = make_rule("192.168.1.0", 24, 1);
+
+    struct {
+        const char *ip;
+        bool expected;
+    } cases[] = {
+        {"192.168.1.1", true},
+        {"192.168.1.255", true},
+        {"192.168.0.1", false},
+        {"192.168.2.1", false},
+        {"10.0.0.1", false}};
+
+    for (size_t i = 0; i < 5; i++) {
+        printf("\n--- Test Case %zu ---\n", i + 1);
+        fails += _test_prefix_match(&rule, cases[i].ip, cases[i].expected);
+    }
+
+    TEST_REPORT("prefix_match", fails);
+
+    return fails;
+}
+
+// Wrapper function for extract_bits
+int _test_extract_bits(uint32_t value, uint8_t start,
+        uint8_t n_bits, uint32_t expected) {
+    uint32_t result = extract_bits(value, start, n_bits);
+    printf("0x%X: Extract %u bits starting at %u - Expected: 0x%X, Got: 0x%X\n",
+           value, n_bits, start, result, expected);
+    if (result != expected) {
+        TEST_FAIL("Expected: 0x%X, Got: 0x%X\n", expected, result);
+    }
+    return 0;
+}
+
+// Test collection for extract_bits
+int test_extract_bits() {
+    printf("\n=== Testing extract_bits ===\n");
+    int fails = 0;
+
+    uint32_t test_value = 0xABCDEF12; // Binary: 10101011 11001101 11101111 00010010
+
+    struct {
+        uint8_t start;
+        uint8_t n_bits;
+        uint32_t expected;
+    } cases[] = {
+        {0, 4, 0x2},        // Last 4 bits
+        {4, 8, 0xF1},       // Next byte
+        {16, 8, 0xCD},      // Third byte
+        {24, 8, 0xAB},      // First byte
+        {8, 12, 0xDEF},     // Middle 12 bits
+        {5, 3, 0x0},        // 3 bits starting at 5
+        {0, 32, 0xABCDEF12} // All bits
+    };
+
+    for (size_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+        printf("\n--- Test Case %zu ---\n", i + 1);
+
+        fails += _test_extract_bits(test_value,
+            cases[i].start, cases[i].n_bits, cases[i].expected);
+    }
+
+    TEST_REPORT("extract_bits", fails);
+
+    return fails;
+}
+
+// Auxiliary function to automate node comparison
+int _inspect_node(TrieNode *node, TrieNode *expected) {
+    printf("Node %p: ", (void *)node);
+    print_node(node);
+    printf("Expected:            ");
+    print_node(expected);
+
+    if (!eq_nodes(node, expected)) {
+        TEST_FAIL("Nodes are NOT equal\n");
+    }
+
+    return 0;
+}
+
+// Test collection for create_trie
+int test_create_trie() {
+    printf("\n=== Testing create_trie ===\n");
+    int fails = 0;
+
+    // Test case 1
+    printf("\n--- Test Case 1: Simple trie with 3 rules ---\n");
+    Rule rules1[] = {
+        make_rule("192.168.1.0", 24, 1),
+        make_rule("192.168.2.0", 24, 2),
+        make_rule("192.168.3.0", 24, 3) // Default route
+    };
+
+    printf("Input rules:\n");
+    print_rules(rules1, sizeof(rules1) / sizeof(rules1[0]));
+    // Sort rules (create_trie currently expects sorted rules)
+    Rule *sorted1 = sort_rules(rules1, sizeof(rules1) / sizeof(rules1[0]));
+    printf("\nSorted rules:\n");
+    print_rules(sorted1, 3);
+
+    TrieNode *trie = create_trie(sorted1, sizeof(rules1) / sizeof(rules1[0]));
+    if (trie == NULL) {
+        TEST_FAIL("Trie creation FAILED: returned NULL\n");
+    }
+
+    // Inspecting root
+    printf("\nInspecting root:\n");
+    TrieNode expected_root = {.branch=1, .skip=22, .pointer=NULL};
+    fails += _inspect_node(trie, &expected_root);
+
+    // Inspecting first child
+    printf("\nInspecting first child:\n");
+    TrieNode *child = trie->pointer;
+    TrieNode expected_child1 = {.skip=0, .branch=0, .pointer=&sorted1[0]};
+    fails += _inspect_node(child, &expected_child1);
+
+    // Inspecting second child
+    printf("\nInspecting second child:\n");
+    TrieNode *child2 = (TrieNode *) trie->pointer+1;
+    TrieNode expected_child2 = {.skip=0, .branch=1, .pointer=NULL};
+    fails += _inspect_node(child2, &expected_child2);
+
+    // Inspecting second child's children
+    printf("\nInspecting second child's children:\n");
+    TrieNode *child21 = (TrieNode *) child2->pointer;
+    TrieNode expected_child21 = {.skip=0, .branch=0, .pointer=&sorted1[1]};
+    fails += _inspect_node(child21, &expected_child21);
+    TrieNode *child22 = (TrieNode *) child2->pointer + 1;
+    TrieNode expected_child22 = {.skip=0, .branch=0, .pointer=&sorted1[2]};
+    fails += _inspect_node(child22, &expected_child22);
+
+    free(sorted1);
+    /* free_trie(trie); */
+
+    // Test case 2
+    printf("\n--- Test Case 2: Empty trie ---\n");
+    TrieNode *empty_trie = create_trie(NULL, 0);
+    if (empty_trie != NULL) {
+        printf("! TEST FAIL ! Expected NULL Trie for empty rules\n");
+        free(empty_trie);
+        fails += 1;
+    }
+
+    TEST_REPORT("create_trie", fails);
+
+    return fails;
+}
+
+// ==== Helper functions ====
+
 // Function to print a rule in human-readable format
 void print_rule(const Rule *rule) {
     printf("%u.%u.%u.%u/%u -> iface %u\n",
@@ -22,6 +450,38 @@ void print_rules(const Rule *rules, size_t count) {
     }
 }
 
+int eq_rules(const Rule *a, const Rule *b) {
+    return (a->prefix == b->prefix &&
+            a->prefix_len == b->prefix_len &&
+            a->out_iface == b->out_iface);
+}
+
+void print_node(const TrieNode *node) {
+    printf("skip=%u, branch=%u, pointer=%4p",
+           node->skip, node->branch, (void *)node->pointer);
+
+    if (node->branch == 0) {
+        printf(" to rule ");
+        if (node->pointer != NULL) {
+            print_rule((Rule *)node->pointer);
+        }
+        else {
+            printf("\n");
+        }
+    }
+    else {
+        printf(" to child\n");
+    }
+}
+
+// Function to compare two TrieNode structures
+// If the second node's `pointer` is NULL, no `pointer` comparison is done
+int eq_nodes(const TrieNode *a, const TrieNode *b) {
+    return (a->skip == b->skip &&
+            a->branch == b->branch &&
+            (b->pointer == NULL || a->pointer == b->pointer));
+}
+
 // Helper function to create a rule
 Rule make_rule(const char *ip, uint8_t len, int iface) {
     Rule r;
@@ -33,302 +493,23 @@ Rule make_rule(const char *ip, uint8_t len, int iface) {
     return r;
 }
 
-// Test function for compute_skip
-void test_compute_skip() {
-    printf("\n=== Testing compute_skip ===\n");
+// ==== Main flow ====
 
-    // Test case 1: All rules share first 16 bits
-    Rule rules1[] = {
-        make_rule("192.168.1.0", 24, 1),
-        make_rule("192.168.2.0", 24, 2),
-        make_rule("192.168.3.0", 24, 3)};
-
-    printf("\nTest Case 1 (Common 16 bits):\n");
-    print_rules(rules1, 3);
-    uint8_t skip = compute_skip(rules1, 3, 0);
-    printf("Computed skip: %u bits\n", skip);
-
-    // Test case 2: Different first octet
-    Rule rules2[] = {
-        make_rule("10.0.0.0", 8, 1),
-        make_rule("192.168.0.0", 16, 2)};
-
-    printf("\nTest Case 2 (Different first octet):\n");
-    print_rules(rules2, 2);
-    skip = compute_skip(rules2, 2, 0);
-    printf("Computed skip: %u bits\n", skip);
-
-    // Test case 3: Single rule
-    printf("\nTest Case 3 (Single rule):\n");
-    print_rules(rules1, 1);
-    skip = compute_skip(rules1, 1, 0);
-    printf("Computed skip: %u bits\n", skip);
-}
-
-// Test function for compute_branch
-void test_compute_branch() {
-    printf("\n=== Testing compute_branch ===\n");
-
-    // Test case 1: Needs 2-bit branching
-    Rule rules1[] = {
-        make_rule("192.168.1.0", 24, 1),
-        make_rule("192.168.2.0", 24, 2),
-        make_rule("192.168.3.0", 24, 3),
-        make_rule("192.168.4.0", 24, 4)};
-
-    printf("\nTest Case 1 (4 rules with different 3rd octet):\n");
-    print_rules(rules1, 4);
-    uint8_t branch = compute_branch(rules1, 4, 16); // After first 16 bits
-    printf("Computed branch: %u bits\n", branch);
-
-    // Test case 2: Single rule
-    printf("\nTest Case 2 (Single rule):\n");
-    print_rules(rules1, 1);
-    branch = compute_branch(rules1, 1, 0);
-    printf("Computed branch: %u bits\n", branch);
-
-    // Test case 3: Needs 1-bit branching
-    Rule rules3[] = {
-        make_rule("192.168.1.0", 24, 1),
-        make_rule("192.168.129.0", 24, 2)};
-
-    printf("\nTest Case 3 (2 rules with different MSB in 3rd octet):\n");
-    print_rules(rules3, 2);
-    branch = compute_branch(rules3, 2, 16); // After first 16 bits
-    printf("Computed branch: %u bits\n", branch);
-}
-
-// Test function for sort_rules
-void test_sort_rules() {
-    printf("\n=== Testing sort_rules ===\n");
-
-    // Test case 1: Mixed prefixes with default route
-    Rule test1[] = {
-        make_rule("192.168.1.0", 24, 1),
-        make_rule("0.0.0.0", 0, 2), // Default route
-        make_rule("10.0.0.0", 8, 3),
-        make_rule("192.168.0.0", 16, 4),
-        make_rule("192.168.0.0", 24, 5), // Same network, longer prefix
-        make_rule("10.0.0.0", 16, 6)     // Same network, longer prefix
-    };
-
-    printf("\nTest Case 1 (Mixed prefixes with default route):\n");
-    printf("Original rules:\n");
-    print_rules(test1, sizeof(test1) / sizeof(test1[0]));
-
-    Rule *sorted1 = sort_rules(test1, sizeof(test1) / sizeof(test1[0]));
-    printf("\nSorted rules:\n");
-    print_rules(sorted1, sizeof(test1) / sizeof(test1[0]));
-    free(sorted1);
-
-    // Test case 2: Same network, different prefix lengths
-    Rule test2[] = {
-        make_rule("192.168.1.0", 28, 1),
-        make_rule("192.168.1.0", 24, 2),
-        make_rule("192.168.1.0", 16, 3),
-        make_rule("192.168.1.0", 32, 4)};
-
-    printf("\nTest Case 2 (Same network, different prefix lengths):\n");
-    printf("Original rules:\n");
-    print_rules(test2, sizeof(test2) / sizeof(test2[0]));
-
-    Rule *sorted2 = sort_rules(test2, sizeof(test2) / sizeof(test2[0]));
-    printf("\nSorted rules:\n");
-    print_rules(sorted2, sizeof(test2) / sizeof(test2[0]));
-    free(sorted2);
-
-    // Test case 3: Multiple default routes (shouldn't happen but test anyway)
-    Rule test3[] = {
-        make_rule("0.0.0.0", 0, 2),
-        make_rule("0.0.0.0", 0, 1), // Same default, different interface
-        make_rule("10.0.0.0", 8, 3)};
-
-    printf("\nTest Case 3 (Multiple default routes):\n");
-    printf("Original rules:\n");
-    print_rules(test3, sizeof(test3) / sizeof(test3[0]));
-
-    Rule *sorted3 = sort_rules(test3, sizeof(test3) / sizeof(test3[0]));
-    printf("\nSorted rules:\n");
-    print_rules(sorted3, sizeof(test3) / sizeof(test3[0]));
-    free(sorted3);
-}
-
-// Test function for compute_default
-void test_compute_default() {
-    printf("\n=== Testing compute_default ===\n");
-
-    // Test case 1: Has default route
-    Rule rules1[] = {
-        make_rule("0.0.0.0", 0, 1), // Default route
-        make_rule("192.168.1.0", 24, 2),
-        make_rule("192.168.0.0", 16, 3)};
-
-    printf("\nTest Case 1 (With default route):\n");
-    print_rules(rules1, 3);
-    Rule *default_rule = compute_default(rules1, 3, 0);
-    printf("Default rule: ");
-    if (default_rule)
-        print_rule(default_rule);
-    else
-        printf("None\n");
-
-    // Test case 2: No default route
-    Rule rules2[] = {
-        make_rule("192.168.1.0", 24, 1),
-        make_rule("192.168.0.0", 16, 2)};
-
-    printf("\nTest Case 2 (No default route):\n");
-    print_rules(rules2, 2);
-    default_rule = compute_default(rules2, 2, 0);
-    printf("Default rule: ");
-    if (default_rule)
-        print_rule(default_rule);
-    else
-        printf("None\n");
-
-    // Test case 3: Default appears after specific routes
-    Rule rules3[] = {
-        make_rule("192.168.1.0", 24, 1),
-        make_rule("192.168.0.0", 16, 2),
-        make_rule("0.0.0.0", 0, 3) // Default route at end
-    };
-
-    printf("\nTest Case 3 (Default at end):\n");
-    print_rules(rules3, 3);
-    default_rule = compute_default(rules3, 3, 0);
-    printf("Default rule: ");
-    if (default_rule)
-        print_rule(default_rule);
-    else
-        printf("None\n");
-}
-
-// Test function for prefix_match
-void test_prefix_match() {
-    printf("\n=== Testing prefix_match ===\n");
-
-    Rule rule = make_rule("192.168.1.0", 24, 1);
-    printf("Test rule: ");
-    print_rule(&rule);
-
-    struct {
-        const char *ip;
-        bool expected;
-    } test_cases[] = {
-        {"192.168.1.1", true},
-        {"192.168.1.255", true},
-        {"192.168.0.1", false},
-        {"192.168.2.1", false},
-        {"10.0.0.1", false}};
-
-    for (size_t i = 0; i < sizeof(test_cases) / sizeof(test_cases[0]); i++) {
-        uint32_t ip = 0;
-        unsigned int a, b, c, d;
-        sscanf(test_cases[i].ip, "%u.%u.%u.%u", &a, &b, &c, &d);
-        ip = (a << 24) | (b << 16) | (c << 8) | d;
-
-        bool result = prefix_match(&rule, ip);
-        printf("IP %s - Expected: %s, Got: %s - %s\n",
-               test_cases[i].ip,
-               test_cases[i].expected ? "true" : "false",
-               result ? "true" : "false",
-               result == test_cases[i].expected ? "PASS" : "FAIL");
-    }
-}
-
-// Test function for extract_bits
-void test_extract_bits() {
-    printf("\n=== Testing extract_bits ===\n");
-
-    uint32_t test_value = 0xABCDEF12; // Binary: 10101011 11001101 11101111 00010010
-
-    struct {
-        uint8_t start;
-        uint8_t n_bits;
-        uint32_t expected;
-    } test_cases[] = {
-        {0, 4, 0x2},        // Last 4 bits
-        {4, 8, 0xF1},       // Next byte
-        {16, 8, 0xCD},      // Third byte
-        {24, 8, 0xAB},      // First byte
-        {8, 12, 0xDEF},     // Middle 12 bits
-        {5, 3, 0x0},        // 3 bits starting at 5
-        {0, 32, 0xABCDEF12} // All bits
-    };
-
-    for (size_t i = 0; i < sizeof(test_cases) / sizeof(test_cases[0]); i++) {
-        uint32_t result = extract_bits(test_value, test_cases[i].start, test_cases[i].n_bits);
-        printf("Extract %u bits from position %u - Expected: 0x%X, Got: 0x%X - %s\n",
-               test_cases[i].n_bits,
-               test_cases[i].start,
-               test_cases[i].expected,
-               result,
-               result == test_cases[i].expected ? "PASS" : "FAIL");
-    }
-}
-
-// Test function for create_trie
-void test_create_trie() {
-    printf("\n=== Testing create_trie ===\n");
-
-    // Test case 1: Simple trie with 3 rules
-    Rule rules1[] = {
-        make_rule("192.168.1.0", 24, 1),
-        make_rule("192.168.2.0", 24, 2),
-        make_rule("192.168.3.0", 24, 3) // Default route
-    };
-
-    printf("\nTest Case 1: Simple trie with 3 rules\n");
-    printf("Input rules:\n");
-    print_rules(rules1, sizeof(rules1) / sizeof(rules1[0]));
-
-    // Sort rules first (create_trie expects sorted rules)
-    Rule *sorted_rules = sort_rules(rules1, sizeof(rules1) / sizeof(rules1[0]));
-
-    printf("\nSorted rules:\n");
-    print_rules(sorted_rules, sizeof(rules1) / sizeof(rules1[0]));
-    free(sorted_rules);
-
-    TrieNode *trie = create_trie(sorted_rules, sizeof(rules1) / sizeof(rules1[0]));
-    if (trie == NULL) {
-        printf("FAIL: Trie creation returned NULL\n");
-        free(sorted_rules);
-        return;
-    }
-
-    printf("PASS: Trie created successfully\n");
-
-    // Basic verification
-    printf("Trie root node properties:\n");
-    printf(" - Skip: %u\n", trie->skip);
-    printf(" - Branch: %u\n", trie->branch);
-    printf(" - Pointer: %p\n", (void *)trie->pointer);
-
-    // Test case 2: Empty trie
-    printf("\nTest Case 2: Empty trie\n");
-    TrieNode *empty_trie = create_trie(NULL, 0);
-    if (empty_trie == NULL) {
-        printf("PASS: NULL returned for empty rules (expected behavior)\n");
-    }
-    else {
-        printf("FAIL: Expected NULL for empty rules\n");
-        // Liberar solo si create_trie no devolvió NULL
-        free(empty_trie);
-    }
-}
-
+// Run all tests
 int main() {
     printf("=== LC-Trie Function Test Suite ===\n");
+    int fails = 0;
 
     // Run all test functions
-    test_compute_skip();
-    test_compute_branch();
-    test_sort_rules();
-    test_compute_default();
-    test_prefix_match();
-    test_extract_bits();
-    test_create_trie();
+    fails += test_compute_skip();
+    fails += test_compute_branch();
+    fails += test_sort_rules();
+    fails += test_compute_default();
+    fails += test_prefix_match();
+    fails += test_extract_bits();
+    fails += test_create_trie();
 
-    printf("\nAll tests completed.\n");
-    return 0;
+    TEST_REPORT("ALL", fails);
+
+    return fails;
 }
