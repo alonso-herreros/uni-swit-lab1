@@ -241,7 +241,9 @@ Rule *compute_default(const Rule *group, size_t group_size, uint8_t pre_skip) {
  *  @return true if the address matches the rule, false otherwise
  */
 bool prefix_match(const Rule *rule, ip_addr_t address) {
-    uint32_t mask = 0xFFFFFFFF << (32 - rule->prefix_len);
+    // Masking the shift distance with 31 ensures we don't try to shift by more
+    // than 31 bits, which would be undefined behavior.
+    uint32_t mask = 0xFFFFFFFF << ((32 - rule->prefix_len) & 31);
     return (address & mask) == (rule->prefix & mask);
 }
 
