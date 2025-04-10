@@ -260,6 +260,59 @@ TrieNode *create_trie(Rule *rules, size_t num_rules) {
     return root;
 }
 
+// ---- Address lookup ----
+
+uint32_t lookup_ip(uint32_t ip_addr, TrieNode *trie) {
+    TrieNode *current = trie;
+    uint8_t bit_pos = current->skip;
+    uint8_t read_bits = current->branch;
+
+    // Traverse the trie until reaching a leaf node
+    while (read_bits != 0) {
+        uint32_t bits = extract_msb(ip_addr, bit_pos, read_bits);
+        TrieNode *next = ((TrieNode *)current->pointer) + bits;
+
+        if (next == NULL) {
+            return 0;
+        }
+
+        bit_pos += read_bits + next->skip;
+        read_bits = next->branch;
+        current = next;
+    }
+
+    // Check the leaf node's prefix
+    Rule *match = (Rule *)current->pointer;
+    if (match == NULL) {
+        return 0;
+    }
+
+    return prefix_match(match, ip_addr) ? match->out_iface : 0;
+}
+
+// ---- Trie cleanup ----
+
+void free_children(TrieNode *root) {
+    if (root->branch == 0) {
+        return; // Leaf node, nothing to free
+    }
+    TrieNode *children = root->pointer;
+    int num_children = 1 << root->branch;
+
+    for (int i = 0; i < num_children; i++) {
+        free_children(&children[i]);
+    }
+    free(children);
+}
+
+void free_trie(TrieNode *root) {
+    if (root == NULL)
+        return;
+
+    free_children(root);
+    free(root);
+}
+
 // ---- Mock implementations for testing ----
 
 #ifdef MOCK
@@ -269,12 +322,6 @@ uint32_t count_nodes_trie(TrieNode *trie) {
         return 0;
     }
     return 42;  // Indeed
-}
-
-// WARNING: MOCK IMPLEMENTATION
-uint32_t lookup_ip(ip_addr_t ip_addr, TrieNode *trie) {
-    // Mock implementation: always return 0
-    return 1;
 }
 
 // WARNING: MOCK IMPLEMENTATION
