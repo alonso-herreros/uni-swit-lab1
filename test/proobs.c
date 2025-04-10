@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <string.h>
 
 // ==== Macros ====
 #define TEST_FAIL(format, ...) \
@@ -24,6 +25,10 @@ int eq_rules(const Rule *a, const Rule *b);
 
 void print_node(const TrieNode *node);
 int eq_nodes(const TrieNode *a, const TrieNode *b);
+
+void sprint_bits(char *dest, int value, int bits, int nibble_offset);
+void print_trie(const TrieNode *trie, char *tree_prefix, char *match_prefix,
+        int pre_skip);
 
 TrieNode *build_test_trie();
 
@@ -340,6 +345,8 @@ int test_create_trie() {
     print_rules(sorted1, 3);
 
     TrieNode *trie = create_trie(sorted1, sizeof(rules1) / sizeof(rules1[0]));
+    printf("Trie created:\n");
+    print_trie(trie, NULL, NULL, 0);
     if (trie == NULL) {
         TEST_FAIL("Trie creation FAILED: returned NULL\n");
     }
@@ -376,6 +383,7 @@ int test_create_trie() {
     // Test case 2
     printf("\n--- Test Case 2: Empty trie ---\n");
     TrieNode *empty_trie = create_trie(NULL, 0);
+    print_trie(empty_trie, NULL, NULL, 0);
     if (empty_trie != NULL) {
         printf("! TEST FAIL ! Expected NULL Trie for empty rules\n");
         free(empty_trie);
@@ -408,6 +416,7 @@ int test_lookup() {
 
     // Build test trie
     TrieNode *trie = build_test_trie();
+    print_trie(trie, NULL, NULL, 0);
 
     // Test cases
     struct
@@ -546,6 +555,76 @@ int eq_nodes(const TrieNode *a, const TrieNode *b) {
             (b->pointer == NULL || a->pointer == b->pointer));
 }
 
+// Print the structure of a trie
+void print_trie(const TrieNode *trie, char *tree_prefix, char *match_prefix,
+        int pre_skip) {
+    const static size_t STRING_LENGTH = 321;
+
+    if (trie==NULL) {
+        printf("<NULL TRIE>\n");
+        return;
+    }
+
+    bool root = 0; // This allows us to skip indenting the whole trie
+    if (tree_prefix == NULL || match_prefix == NULL) {
+        tree_prefix = match_prefix = ""; // Initialize both
+        root = 1;
+    }
+
+    int skip = trie->skip;
+    int branch = trie->branch;
+
+    // Print the current node's 'path'
+    printf("%s%s%s* (s%d b%d)", tree_prefix, root?"":"|-", match_prefix,
+            skip, branch);
+
+    if (branch == 0) { // Print the associated rule
+        if (trie->pointer != NULL) {
+            printf(": ");
+            print_rule((Rule *)trie->pointer);
+        } else {
+            printf("::\n");
+        }
+        return;
+    } else { // Print a line terminator
+        printf(";\n");
+    }
+
+    // Recursion adding prefixes
+    char new_tree_prefix[STRING_LENGTH];
+    sprintf(new_tree_prefix, "%s%s", tree_prefix, root?"":"| ");
+
+    char new_match_prefix[STRING_LENGTH];
+    memcpy(new_match_prefix, match_prefix, STRING_LENGTH);
+    sprint_bits(new_match_prefix, -1, skip, pre_skip);
+
+    int max_children = 1 << branch;
+    for (int i = 0; i < max_children; i++) {
+        char child_match_prefix[STRING_LENGTH];
+        memcpy(child_match_prefix, new_match_prefix, STRING_LENGTH);
+        sprint_bits(child_match_prefix, i, branch, pre_skip+skip);
+
+        TrieNode *child = (TrieNode *)trie->pointer + i;
+        print_trie(child, new_tree_prefix, child_match_prefix,
+                pre_skip+skip+branch);
+    }
+}
+
+void sprint_bits(char *dest, int value, int bits, int nibble_offset) {
+    /* memcpy(dest, "", 1); */
+    for (int i=0; i < bits; i++) {
+        int bit_pos = i + nibble_offset;
+        if (bit_pos != 0 && bit_pos % 4 == 0) {
+            sprintf(dest, "%s ", dest);
+        }
+        if (value < 0) { // Interpret value < 0 as printing '?'s
+            sprintf(dest, "%s?", dest);
+        } else {
+            sprintf(dest, "%s%d", dest, (value >> (bits-i-1)) & 1);
+        }
+    }
+}
+
 // Helper function to create a rule
 Rule make_rule(const char *ip, uint8_t len, int iface) {
     Rule r;
@@ -558,7 +637,7 @@ Rule make_rule(const char *ip, uint8_t len, int iface) {
 }
 
 /**
- * Builds a test LC-Trie structure with sample routing entries
+ * Builds a test Trie structure with sample routing entries
  * @return Pointer to the root of the constructed trie
  */
 TrieNode *build_test_trie() {
