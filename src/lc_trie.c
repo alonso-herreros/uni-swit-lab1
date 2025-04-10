@@ -2,7 +2,6 @@
 #include "utils.h"
 #include <stdlib.h>
 #include <string.h>
-#include <stdio.h>
 
 // ---- Trie creation ----
 
@@ -267,12 +266,12 @@ uint32_t lookup(uint32_t ip_addr, TrieNode *trie) {
     TrieNode *current = trie;
     uint8_t bit_pos = current->skip;
     uint8_t read_bits = current->branch;
-    
+
     // Traverse the trie until reaching a leaf node
     while (read_bits != 0) {
         uint32_t bits = extract_msb(ip_addr, bit_pos, read_bits);
         TrieNode *next = ((TrieNode *)current->pointer) + bits;
-        
+
         if (next == NULL) {
             return 0;
         }
@@ -299,7 +298,6 @@ void free_children(TrieNode *root) {
     }
     TrieNode *children = root->pointer;
     int num_children = 1 << root->branch;
-    printf("Freeing %d children of %p at %p...\n", num_children, root, children);
 
     for (int i = 0; i < num_children; i++) {
         free_children(children);
