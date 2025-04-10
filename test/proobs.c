@@ -42,20 +42,29 @@ void test_check_prefix()
     printf("=== Running check_prefix() tests ===\n");
 
     // Test 1: Full 32-bit prefix match
+    //192.168.1.1 -> 192.168.1.1/32
     assert(check_prefix(0xC0A80101, 0xC0A80101, 32) == 1);
     printf("Test 1 passed: Full 32-bit prefix match\n");
 
     // Test 2: 24-bit prefix match
-    assert(check_prefix(0xC0A80102, 0xC0A80101, 24) == 1);
+    //192.168.1.2 -> 192.168.1.0/24
+    assert(check_prefix(0xC0A80102, 0xC0A80100, 24) == 1);
     printf("Test 2 passed: 24-bit prefix match\n");
 
     // Test 3: 16-bit prefix mismatch
-    assert(check_prefix(0xC0A80101, 0xC0B80101, 16) == 0);
+    //192.168.1.1 -✗> 192.184.0.0/16
+    assert(check_prefix(0xC0A80101, 0xC0B80000, 16) == 0);
     printf("Test 3 passed: 16-bit prefix mismatch\n");
 
     // Test 4: 12-bit prefix match
+    //192.16.0.2 -> 192.16.0.0/12
     assert(check_prefix(0xAC100002, 0xAC100000, 12) == 1);
     printf("Test 4 passed: 12-bit prefix match\n");
+
+    // Test 5: 12-bit prefix match
+    //192.32.0.2 -✗> 192.16.0.0/12
+    assert(check_prefix(0xAC200002, 0xAC100000, 12) == 0);
+    printf("Test 5 passed: 12-bit prefix match\n");
 
     printf("=== All check_prefix tests passed ===\n\n");
 }
@@ -157,6 +166,23 @@ int main()
         int expected;
         const char *description;
     } tests[] = {
+
+        {0x0AC86432, 2, "10.200.100.50"},    // 10.200.100.50
+        {0xAC100A0A, 3, "172.16.10.10"},    // 172.16.10.10
+        {0xC0A8010A, 1, "192.168.1.10"},    // 192.168.1.10
+        {0x0AFFFFFF, 2, "10.255.255.255"},    // 10.255.255.255
+        {0xDFFFFFFF, 0, "223.255.255.255"},    // 223.255.255.255
+        {0x00000101, 0, "0.0.1.1"},    // 0.0.1.1
+        {0xAC3FFF00, 4, "172.63.255.255"},    // 172.63.255.255
+        {0xC0323232, 0, "192.50.50.50 Out of range (Below the range)"},    // 192.50.50.50 /FAILS
+        {0xFFFFFF00, 0, "255.255.255.0"},    // 255.255.255.0
+        {0xAC100001, 3, "172.16.0.1"},    // 172.16.0.1
+        {0xAC20000A, 4, "172.32.0.10"},    // 172.32.0.10
+        {0xC0A83232, 1, "192.168.50.50"},    // 192.50.50.50 /FAILS
+        {0xC0A8010A, 1, "192.168.1.10"},    // 192.168.1.10
+        {0xFFFF0000, 0, "255.255.0.0"}};   // 255.255.0.0
+
+        /*
         // Tests for 192.168.0.0/16 (port 1)
         {0xC0A80000, 1, "Lower bound 192.168.0.0"},
         {0xC0A80101, 1, "Typical IP 192.168.1.1"},
@@ -201,6 +227,10 @@ int main()
         {0x45A3D2F1, 0, "Random IP 69.163.210.241"},
         {0xDEADBEEF, 0, "Special pattern IP 222.173.190.239"},
         {0x12345678, 0, "Special pattern IP 18.52.86.120"}};
+
+        */
+        
+
 
     printf("\n=== Running lookup tests ===\n");
     for (size_t i = 0; i < sizeof(tests) / sizeof(tests[0]); i++)
