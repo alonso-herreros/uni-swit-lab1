@@ -390,6 +390,44 @@ int test_create_trie() {
         fails += 1;
     }
 
+    // Test case 3
+    printf("\n--- Test Case 3: complex trie ---\n");
+    Rule rules3[] = {
+        make_rule("0.0.0.0",     0,  1),   // Default route
+        make_rule("0.1.0.0",     16, 2),
+        make_rule("10.0.0.0",    8,  3),
+        make_rule("10.0.0.0",    16, 10),
+        make_rule("10.1.0.0",    16, 11),
+        make_rule("10.2.0.0",    16, 12),
+        make_rule("10.4.0.0",    16, 14),
+        make_rule("10.5.0.0",    16, 15),
+        make_rule("10.6.0.0",    16, 16),
+        make_rule("10.7.0.0",    16, 17),
+        make_rule("172.16.0.0",  12, 5),
+        make_rule("172.20.0.0",  16, 20),
+        make_rule("172.21.0.0",  16, 21),
+        make_rule("172.22.0.0",  16, 22),
+        make_rule("172.23.0.0",  16, 23),
+        make_rule("192.168.1.0", 24, 101)
+    };
+    int nrules3 = sizeof(rules3) / sizeof(rules3[0]);
+
+    printf("Input rules:\n");
+    print_rules(rules3, nrules3);
+    // Sort rules (create_trie currently expects sorted rules)
+    Rule *sorted3 = sort_rules(rules3, nrules3);
+    printf("\nSorted rules:\n");
+    print_rules(sorted3, nrules3);
+
+    /* TrieNode *trie3 = create_trie(sorted3, nrules3); */
+    TrieNode *trie3 = NULL;
+    printf("Trie created:\n");
+    print_trie(trie3, NULL, NULL, 0);
+    if (trie3 == NULL) {
+        TEST_FAIL("Trie creation FAILED: returned NULL\n");
+    }
+
+
     TEST_REPORT("create_trie", fails);
 
     return fails;
