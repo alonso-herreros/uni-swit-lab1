@@ -5,12 +5,16 @@
 #include <stdint.h>  // For fixed-width integer types like uint32_t
 #include <stdbool.h> // For the bool type
 
+// ==== Constants ====
+#ifndef FILL_FACTOR
+#define FILL_FACTOR 1 // Determines how densely populated branches must be
+
+#endif
 
 // ==== Data Types ====
 
 /// An IP address as a 32-bit unsigned integer.
 typedef uint32_t ip_addr_t;
-
 
 // ==== Data Structures ====
 
@@ -24,7 +28,7 @@ typedef struct TrieNode {
      * This is the number of bits that are used to branch out from this node.
      * For example, if the branch number is 2, this node will have 4 children.
      */
-    uint8_t  branch;
+    uint8_t branch;
 
     /** Length of the largest common prefix (LCP) under this node.
      *
@@ -34,7 +38,7 @@ typedef struct TrieNode {
      * first and last members of a group share a prefix, all members in between
      * must share it too.
      */
-    uint8_t  skip;
+    uint8_t skip;
 
     /** Pointer to the first child node or corresponding rule.
      *
@@ -60,12 +64,11 @@ typedef struct Rule {
     ip_addr_t prefix;
 
     /// Length of the prefix in bits.
-    uint8_t   prefix_len;
+    uint8_t prefix_len;
 
     /// Outgoing interface associated with this rule.
-    uint32_t  out_iface;
+    uint32_t out_iface;
 } Rule;
-
 
 // ==== Function Prototypes ====
 
@@ -78,7 +81,7 @@ typedef struct Rule {
  *
  * @return Pointer to the root node of the LC-Trie.
  */
-TrieNode* create_trie(Rule *rules, size_t num_rules);
+TrieNode *create_trie(Rule *rules, size_t num_rules);
 
 /** Free the memory allocated for the LC-Trie.
  *
@@ -105,5 +108,17 @@ uint32_t lookup_ip(ip_addr_t ip_addr, TrieNode *trie);
 
 // Not going to add a 'compress_trie' function since the trie is born
 // compressed
+
+// I needed to add them here in order to check my functions in proobs_main.c
+// Rule* parseFibFile(const char* filename, size_t* count);
+
+Rule *sort_rules(Rule *rules, size_t num_rules);
+uint8_t compute_branch(const Rule *group, size_t group_size, uint8_t pre_skip);
+
+uint8_t compute_skip(const Rule *group, size_t group_size, uint8_t pre_skip);
+
+Rule *compute_default(const Rule *group, size_t group_size, uint8_t pre_skip);
+
+bool prefix_match(const Rule *rule, ip_addr_t address);
 
 #endif // LC_TRIE_H

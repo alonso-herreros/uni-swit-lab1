@@ -3,9 +3,9 @@
 /********************************************************************
  * Generate a netmask of length prefixLength
  ********************************************************************/
-void getNetmask(int prefixLength, int *netmask){
-
-	*netmask = (0xFFFFFFFF << (IP_ADDRESS_LENGTH - prefixLength));
+void getNetmask(int prefixLength, int *netmask) {
+  
+  *netmask = (0xFFFFFFFF << (32 - prefixLength)) & 0xFFFFFFFF;
 
 }
 
