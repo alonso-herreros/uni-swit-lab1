@@ -189,7 +189,7 @@ int profiled_lookup(
     // TODO: Pass tableAccessCount to lookup_ip (check #16)
     // Timed IP lookup
     clock_gettime(CLOCK_MONOTONIC_RAW, &initialTime);
-    outInterface = lookup_ip(ip_address, root);
+    outInterface = lookup_ip(ip_address, root, &tableAccessCount);
     clock_gettime(CLOCK_MONOTONIC_RAW, &finalTime);
 
     double searchingTime; // Set by printOutputLine

@@ -262,7 +262,14 @@ TrieNode *create_trie(Rule *rules, size_t num_rules) {
 
 // ---- Address lookup ----
 
-uint32_t lookup_ip(uint32_t ip_addr, TrieNode *trie) {
+uint32_t lookup_ip(ip_addr_t ip_addr, TrieNode *trie, int *access_count) {
+    int black_hole = 0; // Temporary variable to avoid dereferencing NULL
+    if (access_count == NULL) {
+        access_count = &black_hole;
+    }
+
+    *access_count = 0; // Initialize access count
+
     TrieNode *current = trie;
     uint8_t bit_pos = current->skip;
     uint8_t read_bits = current->branch;
@@ -272,14 +279,12 @@ uint32_t lookup_ip(uint32_t ip_addr, TrieNode *trie) {
         uint32_t bits = extract_msb(ip_addr, bit_pos, read_bits);
         TrieNode *next = ((TrieNode *)current->pointer) + bits;
 
-        if (next == NULL) {
-            return 0;
-        }
-
         bit_pos += read_bits + next->skip;
         read_bits = next->branch;
         current = next;
-    }
+
+        (*access_count)++;
+    } // We'll exit when we reach a leaf node, which has branch=0
 
     // Check the leaf node's prefix
     Rule *match = (Rule *)current->pointer;
