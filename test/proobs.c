@@ -419,8 +419,8 @@ int test_create_trie() {
     printf("\nSorted rules:\n");
     print_rules(sorted3, nrules3);
 
-    /* TrieNode *trie3 = create_trie(sorted3, nrules3); */
-    TrieNode *trie3 = NULL;
+    TrieNode *trie3 = create_trie(sorted3, nrules3);
+    /* TrieNode *trie3 = NULL; */
     printf("Trie created:\n");
     print_trie(trie3, NULL, NULL, 0);
     if (trie3 == NULL) {
