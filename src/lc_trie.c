@@ -323,10 +323,4 @@ uint32_t count_nodes_trie(TrieNode *trie) {
     }
     return 42;  // Indeed
 }
-
-// WARNING: MOCK IMPLEMENTATION
-void free_trie(TrieNode *trie) {
-    free(trie);
-}
-
 #endif // MOCK
