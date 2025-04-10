@@ -38,18 +38,18 @@ TrieNode *create_subtrie(Rule *group, size_t group_size, uint8_t pre_skip,
     }
 
     DEBUG_PRINT("Creating subtrie with %zu rules at %p\n", group_size, group);
-    DEBUG_PRINT("  Pre-skip is %zu, default is %p\n", pre_skip, default_rule);
+    DEBUG_PRINT("  Pre-skip is %hhu, default is %p\n", pre_skip, default_rule);
 
     // Compute skip and branch values
     uint8_t skip = compute_skip(group, group_size, pre_skip);
     uint8_t branch = compute_branch(group, group_size, pre_skip + skip);
-    DEBUG_PRINT("  skip = %zu, branch = %zu\n", skip, branch);
+    DEBUG_PRINT("  skip = %hhu, branch = %hhu\n", skip, branch);
 
     // Update default_rule if a suitable one is found
     Rule *new_default = compute_default(group, group_size, pre_skip);
     if (new_default) {
         DEBUG_PRINT("  Updating default, now at %p:\n", new_default);
-        DEBUG_PRINT("    0x%08X/%zu -> %d\n", new_default->prefix,
+        DEBUG_PRINT("    0x%08X/%hhu -> %d\n", new_default->prefix,
                 new_default->prefix_len, new_default->out_iface);
         default_rule = new_default;
     }
@@ -146,7 +146,7 @@ uint8_t compute_skip(const Rule *group, size_t group_size, uint8_t pre_skip) {
     } // At this point, skip is one too big
     skip--;
 
-    DEBUG_PRINT("--Done computing skip: %zu\n", skip - pre_skip);
+    DEBUG_PRINT("--Done computing skip: %hhu\n", skip - pre_skip);
     return skip - pre_skip;
 }
 
@@ -174,7 +174,7 @@ uint8_t compute_branch(const Rule *group, size_t group_size, uint8_t pre_skip) {
         const uint16_t max_branch_prefixes = 1 << branch; //2^branch
         uint16_t unique_branch_prefixes = 1; //Start with 1 (group isn't empty)
         uint32_t last_branch_prefix = extract_msb(group[0].prefix, pre_skip, branch);
-        DEBUG_PRINT("  Trying branch=%zu: %zu prefixes available\n", branch,
+        DEBUG_PRINT("  Trying branch=%hhu: %hu prefixes available\n", branch,
                 max_branch_prefixes);
 
         //Count unique branch prefixes at this branch level
@@ -193,13 +193,13 @@ uint8_t compute_branch(const Rule *group, size_t group_size, uint8_t pre_skip) {
 
         //Return when fill factor condition is no longer met
         if ((float)unique_branch_prefixes / max_branch_prefixes < FILL_FACTOR) {
-            DEBUG_PRINT("--Done computing branch: %zu\n", branch-1);
+            DEBUG_PRINT("--Done computing branch: %hhu\n", branch-1);
             return branch - 1; // This branch is too large
         }
 
         branch++;
     }
-    DEBUG_PRINT("--Abnormal end of compute_branch: %zu\n", branch-1);
+    DEBUG_PRINT("--Abnormal end of compute_branch: %hhu\n", branch-1);
     return branch;
 }
 
@@ -406,7 +406,7 @@ void free_trie(TrieNode *root) {
 
     DEBUG_PRINT("  Freeing root\n");
     free(root);
-    DEBUG_PRINT("--Done freeing tree at %p\n", root);
+    DEBUG_PRINT("--Done freeing tree\n");
 }
 
 // ---- Mock implementations for testing ----
