@@ -172,6 +172,7 @@ Rule *read_rules(int *rule_count) {
 
     // Should we trim the array to the actual size, or leave some slack?
     rules = realloc(rules, sizeof(Rule) * size);
+    *rule_count = size;
 
     return rules;
 }
