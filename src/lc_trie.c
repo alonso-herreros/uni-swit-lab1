@@ -262,7 +262,7 @@ TrieNode *create_trie(Rule *rules, size_t num_rules) {
 
 // ---- Address lookup ----
 
-uint32_t lookup(uint32_t ip_addr, TrieNode *trie) {
+uint32_t lookup_ip(uint32_t ip_addr, TrieNode *trie) {
     TrieNode *current = trie;
     uint8_t bit_pos = current->skip;
     uint8_t read_bits = current->branch;
@@ -322,12 +322,6 @@ uint32_t count_nodes_trie(TrieNode *trie) {
         return 0;
     }
     return 42;  // Indeed
-}
-
-// WARNING: MOCK IMPLEMENTATION
-uint32_t lookup_ip(ip_addr_t ip_addr, TrieNode *trie) {
-    // Mock implementation: always return 0
-    return 1;
 }
 
 // WARNING: MOCK IMPLEMENTATION

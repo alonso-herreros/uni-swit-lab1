@@ -105,7 +105,7 @@ uint32_t count_nodes_trie(TrieNode *trie);
  * @return The outgoing interface associated with the longest matching prefix,
  *      or 0 if no rules match.
  */
-uint32_t lookup(ip_addr_t ip_addr, TrieNode *trie);
+uint32_t lookup_ip(ip_addr_t ip_addr, TrieNode *trie);
 
 // Not going to add a 'compress_trie' function since the trie is born
 // compressed

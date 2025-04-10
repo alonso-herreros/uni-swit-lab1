@@ -390,7 +390,7 @@ int test_create_trie() {
 
 // Test wrapper for lookup
 int _test_lookup(ip_addr_t ip, TrieNode *trie, int expected) {
-    int result = lookup(ip, trie);
+    int result = lookup_ip(ip, trie);
     printf("IP: %08X -> Result: %d (Expected: %d)\n\n", ip, result, expected);
 
     if (result != expected) {
