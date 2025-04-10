@@ -155,7 +155,7 @@ uint8_t compute_branch(const Rule *group, size_t group_size, uint8_t pre_skip) {
 
         //Return when fill factor condition is no longer met
         if ((float)unique_branch_prefixes / max_branch_prefixes < FILL_FACTOR) {
-            return branch;
+            return branch - 1; // This branch is too large
         }
 
         branch++;
