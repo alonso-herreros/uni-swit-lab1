@@ -2,7 +2,7 @@ SRC_DIR    = src
 TEST_DIR   = test
 BUILD_DIR  = build
 
-PROD_FILES = main.c utils.c io.c lc_trie.c
+PROD_FILES = main.c utils.c io.c count_nodes.c
 TEST_FILES = test.c
 PROOBS_FILES = proobs.c
 
