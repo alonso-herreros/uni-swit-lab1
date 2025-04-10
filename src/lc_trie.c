@@ -136,7 +136,7 @@ uint8_t compute_branch(const Rule *group, size_t group_size, uint8_t pre_skip) {
     if (group_size <= 1) return 0;
 
     uint8_t branch = 1;
-    
+
     while (1) {
         const uint16_t max_branch_prefixes = 1 << branch; //2^branch
         uint16_t unique_branch_prefixes = 1; //Start with 1 (group isn't empty)
@@ -145,12 +145,12 @@ uint8_t compute_branch(const Rule *group, size_t group_size, uint8_t pre_skip) {
         //Count unique branch prefixes at this branch level
         for (size_t i = 1; i < group_size; i++) {
             uint32_t current_prefix = extract_msb(group[i].prefix, pre_skip, branch);
-            
+
             if (current_prefix != last_branch_prefix) {
                 unique_branch_prefixes++;
             }
-            
-            last_branch_prefix = current_prefix; 
+
+            last_branch_prefix = current_prefix;
         }
 
         //Return when fill factor condition is no longer met
