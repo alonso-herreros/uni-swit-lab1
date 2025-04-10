@@ -124,13 +124,17 @@ TrieNode *read_trie() {
     DEBUG_PRINT("Read trie enter\n");
     int rule_count = 0;
     Rule *rules = read_rules(&rule_count);
-    DEBUG_PRINT("Read rules done\n");
+    DEBUG_PRINT("Read rules done (%d rules)\n", rule_count);
 
-    TrieNode *root = create_trie(rules, rule_count);
-    DEBUG_PRINT("Create trie done\n");
-    // Since create_trie creates a copy of the rules, we can free them
+    Rule *sorted = sort_rules(rules, rule_count);
     free(rules);
-    DEBUG_PRINT("Free rules done\n");
+    DEBUG_PRINT("Sort rules done\n");
+
+    TrieNode *root = create_trie(sorted, rule_count);
+    DEBUG_PRINT("Create trie done, root at %p\n", root);
+    // Since create_trie doesn't create a copy of the rules yet
+    // free(sorted);
+    // DEBUG_PRINT("Free rules done\n");
 
     return root;
 }
