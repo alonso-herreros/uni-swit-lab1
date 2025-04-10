@@ -1,8 +1,7 @@
 #include "lc_trie.h"
-#include "io.h"
-#include <stdlib.h>
 #include "utils.h"
-#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 // ==== Constants ====
 
