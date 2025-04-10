@@ -300,7 +300,7 @@ void free_children(TrieNode *root) {
     int num_children = 1 << root->branch;
 
     for (int i = 0; i < num_children; i++) {
-        free_children(children);
+        free_children(&children[i]);
     }
     free(children);
 }
