@@ -46,11 +46,26 @@ typedef struct TrieNode
     void *pointer;
 } TrieNode;
 
-typedef struct {
-    uint32_t prefix;
+/** Forwarding rule.
+ *
+ * Associates a CIDR prefix with an outgoing interface. A packet with a
+ * destination address matching the prefix should be sent to this interface
+ * (unless overridden by a more specific rule).
+ */
+typedef struct Rule {
+    /** CIDR prefix.
+     *
+     * Only the first `prefix_len` bits are significant. The rest are ignored,
+     * and should be set to 0.
+     */
+    ip_addr_t prefix;
+
+    /// Length of the prefix in bits.
     uint8_t prefix_len;
-    int out_port;
-} LeafNode;
+
+    /// Outgoing interface associated with this rule.
+    uint32_t out_iface;
+} Rule;
 
 int check_prefix(uint32_t ip_addr, uint32_t target, uint8_t prefix_len);
 uint32_t extract_bits(uint32_t bitstring, uint8_t start, uint8_t n_bits);

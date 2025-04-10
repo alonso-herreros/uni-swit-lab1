@@ -1,17 +1,7 @@
 #include "lookup.h"
+#include "utils.h"
 #include <stdlib.h>
 
-
-/**
- * Extracts 'n_bits' from 'bitstring' starting at 'start' position
- * @param bitstring The 32-bit input value
- * @param start Starting bit position (0-31)
- * @param n_bits Number of bits to extract (0-32)
- * @return Extracted bits as right-aligned value
- */
-uint32_t extract_bits(uint32_t bitstring, uint8_t start, uint8_t n_bits) {
-    return (bitstring >> (32 - start - n_bits)) & ((1U << n_bits) - 1);
-}
 
 /**
  * Checks if an IP address matches a network prefix
@@ -39,7 +29,7 @@ int lookup(uint32_t ip_addr, TrieNode *trie, int default_port) {
     
     // Traverse the trie until reaching a leaf node
     while (read_bits != 0) {
-        uint32_t bits = extract_bits(ip_addr, bit_pos, read_bits);
+        uint32_t bits = extract_msb(ip_addr, bit_pos, read_bits);
         TrieNode *next = ((TrieNode *)current->pointer) + bits;
         
         if (next == NULL) {
@@ -52,11 +42,11 @@ int lookup(uint32_t ip_addr, TrieNode *trie, int default_port) {
     }
 
     // Check the leaf node's prefix
-    LeafNode *match = (LeafNode *)current->pointer;
+    Rule *match = (Rule *)current->pointer;
     if (match == NULL) {
         return default_port;
     }
 
-    return check_prefix(ip_addr, match->prefix, match->prefix_len) ? match->out_port : default_port;
+    return check_prefix(ip_addr, match->prefix, match->prefix_len) ? match->out_iface : default_port;
 }
 
