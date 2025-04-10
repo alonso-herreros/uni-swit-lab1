@@ -119,7 +119,7 @@ TrieNode *create_subtrie(Rule *group, size_t group_size, uint8_t pre_skip,
  */
 uint8_t compute_skip(const Rule *group, size_t group_size, uint8_t pre_skip) {
     DEBUG_PRINT("Computing skip for %zu rules at %p with pre-skip %hhu\n",
-            group_size, group);
+            group_size, group, pre_skip);
     if (group_size == 0){
         DEBUG_PRINT("--Group is empty. Skip is 0.\n");
         return 0;
@@ -154,14 +154,14 @@ uint8_t compute_skip(const Rule *group, size_t group_size, uint8_t pre_skip) {
  *  @return the branching factor. The absolute maximum value is 32.
  */
 uint8_t compute_branch(const Rule *group, size_t group_size, uint8_t pre_skip) {
-    DEBUG_PRINT("Computing branch for %zu rules at %p\n", group_size, group);
+    DEBUG_PRINT("Computing branch for %zu rules at %p with pre-skip %hhu\n",
+            group_size, group, pre_skip);
     if (group_size <= 1) {
         DEBUG_PRINT("--Group too small. Branch is 0.");
         return 0;
     }
 
     uint8_t branch = 1;
-    DEBUG_PRINT("  Pre-skip is %zu\n", pre_skip);
 
     while (1) {
         const uint16_t max_branch_prefixes = 1 << branch; //2^branch
