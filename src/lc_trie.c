@@ -134,7 +134,7 @@ uint8_t compute_skip(const Rule *group, size_t group_size, uint8_t pre_skip) {
     DEBUG_PRINT("  First IP: 0x%08X; Last IP: 0x%08X\n", first, last);
 
     uint8_t skip = pre_skip;
-    while (prefix_match(first, last, skip)) {
+    while (skip <= IP_ADDRESS_LENGTH && prefix_match(first, last, skip)) {
         skip++;
     } // At this point, skip is one too big
     skip--;
