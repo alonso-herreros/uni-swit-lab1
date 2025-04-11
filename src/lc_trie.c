@@ -40,11 +40,6 @@ TrieNode *create_subtrie(Rule *group, size_t group_size, uint8_t pre_skip,
     DEBUG_PRINT("Creating subtrie with %zu rules at %p\n", group_size, group);
     DEBUG_PRINT("  Pre-skip is %hhu, default is %p\n", pre_skip, default_rule);
 
-    // Compute skip and branch values
-    uint8_t skip = compute_skip(group, group_size, pre_skip);
-    uint8_t branch = compute_branch(group, group_size, pre_skip + skip);
-    DEBUG_PRINT("  skip = %hhu, branch = %hhu\n", skip, branch);
-
     // Update default_rule if a suitable one is found
     Rule *new_default = compute_default(group, group_size, pre_skip);
     if (new_default) {
@@ -53,6 +48,12 @@ TrieNode *create_subtrie(Rule *group, size_t group_size, uint8_t pre_skip,
                 new_default->prefix_len, new_default->out_iface);
         default_rule = new_default;
     }
+
+    // Compute skip and branch values
+    uint8_t skip = compute_skip(group, group_size, pre_skip);
+    uint8_t branch = compute_branch(group, group_size, pre_skip + skip);
+    DEBUG_PRINT("  skip = %hhu, branch = %hhu\n", skip, branch);
+
 
     // Edge case! All rules are actually the same but with different prefix lengths
     if ( default_rule == &group[group_size - 1] ) {
