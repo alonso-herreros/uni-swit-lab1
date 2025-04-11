@@ -400,8 +400,13 @@ int test_create_trie() {
 int _test_lookup(ip_addr_t ip, TrieNode *trie, int expected) {
     int access_count = 0;
     int result = lookup_ip(ip, trie, &access_count);
-    printf("IP: %08X -> Result: %d (Expected: %d) in %d accesses\n",
-            ip, result, expected, access_count);
+
+    char ip_str[16];
+    sprintf(ip_str, "%u.%u.%u.%u",
+            (ip >> 24) & 0xFF, (ip >> 16) & 0xFF,
+            (ip >> 8) & 0xFF, ip & 0xFF);
+    printf("IP: %-15s -> Result: %d (Expected: %d) in %d accesses\n",
+            ip_str, result, expected, access_count);
 
     if (result != expected) {
         TEST_FAIL("Wrong match\n");
@@ -412,10 +417,12 @@ int _test_lookup(ip_addr_t ip, TrieNode *trie, int expected) {
 
 // Test collection for lookups
 int test_lookup() {
+    printf("\n=== Testing lookup ===\n");
     int fails = 0;
 
     // Build test trie
     TrieNode *trie = build_test_trie();
+    printf("\n--- Testing with Trie 1 ----\n");
     print_trie(trie, NULL, NULL, 0);
 
     // Test cases
@@ -487,10 +494,8 @@ int test_lookup() {
         {0x12345678, 0, "Special pattern IP 18.52.86.120"}
     };
 
-    printf("\n=== Running lookup tests ===\n");
-    for (int i = 0; i < sizeof(tests) / sizeof(tests[0]); i++)
-    {
-        printf("\n--- Test Case %d: %s ---\n", i+1, tests[i].description);
+    for (int i = 0; i < sizeof(tests) / sizeof(tests[0]); i++) {
+        // printf("\n--- Test Case %d: %s ---\n", i+1, tests[i].description);
         fails += _test_lookup(tests[i].ip, trie, tests[i].expected);
     }
 
