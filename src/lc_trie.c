@@ -353,7 +353,7 @@ uint32_t count_nodes_trie(TrieNode *trie) {
 
     // Si es un nodo interno (tiene hijos)
     uint32_t count = 1; // Contamos este nodo
-    TrieNode **children = (TrieNode **)trie->pointer; //Pointer to the first child
+    TrieNode *children = (TrieNode *)trie->pointer; //Pointer to the first child
 
     // Calculamos cuántos hijos tiene este nodo: 2^branch
     uint32_t num_children = 1 << trie->branch;
@@ -361,9 +361,7 @@ uint32_t count_nodes_trie(TrieNode *trie) {
             num_children, children);
 
     for (uint32_t i = 0; i < num_children; i++) {
-        if (children[i]) {
-            count += count_nodes_trie(children[i]);
-        }
+        count += count_nodes_trie(&children[i]);
     }
 
     DEBUG_PRINT("--Done counting, there are %u nodes under trie at %p\n",
