@@ -485,25 +485,36 @@ int test_count_nodes() {
     printf("\n=== Testing count_nodes_trie ===\n");
     int fails = 0;
 
-    printf("\n--- Test Case 1: Manually built trie ---\n");
-    // Creamos un pequeño trie manualmente
-    TrieNode *leaf1 = create_leaf(0x64400000, 10, 1);  // 100.64.0.0/10
-    TrieNode *leaf2 = create_leaf(0x64800000, 9, 2);   // 100.128.0.0/9
-    TrieNode *leaf3 = create_leaf(0x64000000, 8, 3);   // 100.0.0.0/8
-    TrieNode *leaf5 = create_leaf(0xC0000000, 8, 4);   // 192.0.0.0/8
+    // printf("\n--- Test Case 1: Manually built trie ---\n");
+    // // Creamos un pequeño trie manualmente
+    // TrieNode *leaf1 = create_leaf(0x64400000, 10, 1);  // 100.64.0.0/10
+    // TrieNode *leaf2 = create_leaf(0x64800000, 9, 2);   // 100.128.0.0/9
+    // TrieNode *leaf3 = create_leaf(0x64000000, 8, 3);   // 100.0.0.0/8
+    // TrieNode *leaf5 = create_leaf(0xC0000000, 8, 4);   // 192.0.0.0/8
 
-    TrieNode *children2[2] = {leaf2, leaf3};
-    TrieNode *internal2 = create_internal(1, 2, children2);
+    // TrieNode *children2[2] = {leaf2, leaf3};
+    // TrieNode *internal2 = create_internal(1, 2, children2);
 
-    TrieNode *children1[2] = {leaf1, internal2};
-    TrieNode *internal1 = create_internal(1, 4, children1);
+    // TrieNode *children1[2] = {leaf1, internal2};
+    // TrieNode *internal1 = create_internal(1, 4, children1);
 
-    TrieNode *root_children[2] = {internal1, leaf5};
-    TrieNode *root = create_internal(1, 0, root_children);
+    // TrieNode *root_children[2] = {internal1, leaf5};
+    // TrieNode *root = create_internal(1, 0, root_children);
 
-    // Test the case
-    fails += _test_count_nodes(root, 7);
-    free(root);
+    // // Test the case
+    // fails += _test_count_nodes(root, 7);
+    // free(root);
+
+    // Test case 2
+    printf("\n--- Test Case 2: test_build_trie ---\n");
+    TrieNode *trie2 = build_test_trie();
+    fails += _test_count_nodes(trie2, 7);
+
+    // Test case 3
+    printf("\n--- Test Case 3: test_build_trie2 ---\n");
+    TrieNode *trie3 = build_test_trie2();
+    fails += _test_count_nodes(trie3, 19);
+
     TEST_REPORT("count_nodes_trie", fails);
 
     return fails;
