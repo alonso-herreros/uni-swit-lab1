@@ -286,7 +286,7 @@ Rule *compute_default(const Rule *group, size_t group_size, uint8_t pre_skip) {
             DEBUG_PRINT("    Match. This is a default for the rest.\n");
             default_rule = (Rule *)&group[i];
             DEBUG_PRINT("    Setting parent for all subsequent rules\n");
-            set_parents((Rule *)&group[i+1], group_size - i - 1, default_rule);
+            set_group_parent((Rule *)&group[i+1], group_size - i - 1, default_rule);
         } else {
             DEBUG_PRINT("    No match.\n");
             break;
@@ -297,7 +297,7 @@ Rule *compute_default(const Rule *group, size_t group_size, uint8_t pre_skip) {
     return default_rule;
 }
 
-int set_parents(Rule *group, size_t group_size, Rule *default_rule) {
+int set_group_parent(Rule *group, size_t group_size, Rule *default_rule) {
     DEBUG_PRINT("Setting parents for %zu rules at %p\n", group_size, group);
     if (group_size == 0) {
         DEBUG_PRINT("--Group is empty, returning null");
