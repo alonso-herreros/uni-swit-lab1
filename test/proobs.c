@@ -642,47 +642,44 @@ Rule make_rule(const char *ip, uint8_t len, int iface) {
 }
 
 /**
- * Builds a test Trie structure with sample routing entries
+ * Builds a test LC-Trie structure with sample routing entries
+ *
+ * @note The trie does not have a 100% fill factor, that's why
+ *      the default route is not at the root.
+ *
  * @return Pointer to the root of the constructed trie
+ * * (s0 b2);
+ * |-00* (s0 b0): 10.0.0.0/8 -> iface 2
+ * |-01* (s0 b0): 0.0.0.0/0 -> iface 1
+ * |-10* (s8 b1);
+ * | |-10?? ???? ??0* (s0 b0): 172.16.0.0/12 -> iface 3
+ * | \-10?? ???? ??1* (s0 b0): 172.32.0.0/11 -> iface 4
+ * \-11* (s0 b0): 192.168.0.0/16 -> iface 1
  */
 TrieNode *build_test_trie() {
-    // Create leaf nodes for each route
-    Rule *leaf1 = calloc(1, sizeof(Rule)); // 192.168.0.0/16
-    leaf1->prefix = 0xC0A80000;
-    leaf1->prefix_len = 16;
-    leaf1->out_iface = 1;
 
-    Rule *leaf2 = calloc(1, sizeof(Rule)); // 10.0.0.0/8
-    leaf2->prefix = 0x0A000000;
-    leaf2->prefix_len = 8;
-    leaf2->out_iface = 2;
-
-    Rule *leaf3 = calloc(1, sizeof(Rule)); // 172.16.0.0/12
-    leaf3->prefix = 0xAC100000;
-    leaf3->prefix_len = 12;
-    leaf3->out_iface = 3;
-
-    Rule *leaf4 = calloc(1, sizeof(Rule)); // 172.32.0.0/11
-    leaf4->prefix = 0xAC200000;
-    leaf4->prefix_len = 11;
-    leaf4->out_iface = 4;
-
-    Rule *default_leaf = calloc(1, sizeof(Rule)); // Default route
-    default_leaf->prefix = 0;
-    default_leaf->prefix_len = 0;
-    default_leaf->out_iface = 0;
+    Rule rules_local[] = {
+        make_rule("0.0.0.0", 0, 1),
+        make_rule("192.168.0.0", 16, 1),
+        make_rule("10.0.0.0", 8, 2),
+        make_rule("172.16.0.0", 12, 3),
+        make_rule("172.32.0.0", 11, 4),
+    };
+    // Allocation required because initialized rules_local is on the stack
+    Rule *rules = malloc(sizeof(rules_local));
+    memcpy(rules, rules_local, sizeof(rules_local));
 
     // Level 2 nodes (for 172.x.x.x routes)
     TrieNode *level2 = calloc(2, sizeof(TrieNode));
-    level2[0] = (TrieNode){.branch = 0, .pointer = leaf3}; // 172.16.0.0/12
-    level2[1] = (TrieNode){.branch = 0, .pointer = leaf4}; // 172.32.0.0/11
+    level2[0] = (TrieNode){.branch = 0, .pointer = &rules[3]}; // 172.16.0.0/12
+    level2[1] = (TrieNode){.branch = 0, .pointer = &rules[4]}; // 172.32.0.0/11
 
     // Level 1 nodes (first 2 bits)
     TrieNode *level1 = calloc(4, sizeof(TrieNode));
-    level1[0] = (TrieNode){.branch = 0, .pointer = leaf2};             // 00 -> 10.0.0.0/8
-    level1[1] = (TrieNode){.branch = 0, .pointer = default_leaf};      // 01 -> Default
-    level1[2] = (TrieNode){.branch = 1, .skip = 8, .pointer = level2}; // 10 -> 172.x.x.x
-    level1[3] = (TrieNode){.branch = 0, .pointer = leaf1};             // 11 -> 192.168.0.0/16
+    level1[0] = (TrieNode){.branch = 0, .pointer = &rules[2]}; // 10.0.0.0/8
+    level1[1] = (TrieNode){.branch = 0, .pointer = &rules[0]}; // 0.0.0.0/0
+    level1[2] = (TrieNode){.branch = 1, .skip = 8, .pointer = level2};
+    level1[3] = (TrieNode){.branch = 0, .pointer = &rules[1]}; // 192.168.0.0/16
 
     // Root node
     TrieNode *root = calloc(1, sizeof(TrieNode));
