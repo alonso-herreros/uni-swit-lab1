@@ -436,9 +436,24 @@ uint32_t lookup_ip(ip_addr_t ip_addr, TrieNode *trie, int *access_count) {
     DEBUG_PRINT("  Checking against 0x%08X/%hhu (rule at %p)\n",
             match->prefix, match->prefix_len, match);
 
-    uint32_t out_iface = rule_match(match, ip_addr) ? match->out_iface : 0;
+    uint32_t out_iface;
 
-    DEBUG_PRINT("    %s\n", out_iface ? "Match" : "No match");
+    while(1) {
+        out_iface = rule_match(match, ip_addr) ? match->out_iface : 0;
+        if (out_iface != 0) {
+            DEBUG_PRINT("    Match found: %d\n", out_iface);
+            break;
+        } else if (match->parent != NULL) {
+            match = match->parent;
+            DEBUG_PRINT("    No match, checking parent (0x%08X/%hhu, at %p)\n",
+                    match->prefix, match->prefix_len, match);
+        } else {
+            DEBUG_PRINT("    No match\n");
+            break;
+        }
+    }
+
+    /* DEBUG_PRINT("    %s\n", out_iface ? "Match" : "No match"); */
     DEBUG_PRINT("--Done looking IP up: 0x%08X -> %d\n", ip_addr, out_iface);
 
     return out_iface;
