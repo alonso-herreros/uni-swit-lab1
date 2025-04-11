@@ -305,11 +305,9 @@ int set_group_parent(Rule *group, size_t group_size, Rule *default_rule) {
     }
 
     for (size_t i = 0; i < group_size; i++) {
-        if (group[i].parent == NULL) {
-            group[i].parent = default_rule;
-            DEBUG_PRINT("  Rule %zu at %p parent set to %p\n",
-                    i, &group[i], default_rule);
-        }
+        group[i].parent = default_rule;
+        DEBUG_PRINT("  Rule %zu at %p parent set to %p\n",
+                i, &group[i], default_rule);
     }
 
     DEBUG_PRINT("--Done setting parents\n");
