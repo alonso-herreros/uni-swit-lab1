@@ -18,6 +18,8 @@
 
 // ==== Prototypes ====
 
+ip_addr_t str_to_ip(const char *ip_str);
+
 Rule make_rule(const char *ip, uint8_t len, int iface);
 void print_rules(const Rule *rules, size_t count);
 void print_rule(const Rule *rule);
@@ -463,17 +465,15 @@ int test_lookup() {
 
     // Build test trie
     TrieNode *trie = build_test_trie();
-    printf("\n--- Testing with Trie 1 ----\n");
+    printf("\n-== Testing with Trie 1 ==-\n");
     print_trie(trie, NULL, NULL, 0);
 
     // Test cases
-    struct
-    {
+    struct {
         uint32_t ip;
         int expected;
         const char *description;
     } tests[] = {
-
         {0x0AC86432, 2, "10.200.100.50"},    // 10.200.100.50
         {0xAC100A0A, 3, "172.16.10.10"},    // 172.16.10.10
         {0xC0A8010A, 1, "192.168.1.10"},    // 192.168.1.10
@@ -488,47 +488,40 @@ int test_lookup() {
         {0xC0A83232, 1, "192.168.50.50"},    // 192.50.50.50 /FAILS
         {0xC0A8010A, 1, "192.168.1.10"},    // 192.168.1.10
         {0xFFFF0000, 0, "255.255.0.0"},   // 255.255.0.0
-
         // Tests for 192.168.0.0/16 (port 1)
         {0xC0A80000, 1, "Lower bound 192.168.0.0"},
         {0xC0A80101, 1, "Typical IP 192.168.1.1"},
         {0xC0A8FFFF, 1, "Upper bound 192.168.255.255"},
         {0xC0A7FFFF, 0, "Out of range 192.167.255.255"},
         {0xC0A90000, 0, "Out of range 192.169.0.0"},
-
         // Tests for 10.0.0.0/8 (port 2)
         {0x0A000000, 2, "Lower bound 10.0.0.0"},
         {0x0A010203, 2, "Typical IP 10.1.2.3"},
         {0x0AFFFFFF, 2, "Upper bound 10.255.255.255"},
         {0x09000000, 0, "Out of range 9.0.0.0"},
         {0x0B000000, 0, "Out of range 11.0.0.0"},
-
         // Tests for 172.16.0.0/12 (port 3)
         {0xAC100000, 3, "Lower bound 172.16.0.0"},
         {0xAC101234, 3, "Typical IP 172.16.18.52"},
         {0xAC1FFFFF, 3, "Upper bound 172.31.255.255"},
         {0xAC0FFFFF, 0, "Out of range 172.15.255.255"},
         {0xAC200000, 4, "Out of range (belongs to 172.32.0.0/11)"},
-
         // Tests for 172.32.0.0/11 (port 4)
         {0xAC200000, 4, "Lower bound 172.32.0.0"},
         {0xAC3F1234, 4, "Typical IP 172.63.18.52"},
         {0xAC3FFFFF, 4, "Upper bound 172.63.255.255"},
         {0xAC400000, 0, "Out of range 172.64.0.0"},
-
         // Special cases
         {0x7F000001, 0, "Loopback 127.0.0.1"},
         {0x00000000, 0, "Zero address"},
         {0xFFFFFFFF, 0, "Broadcast address"},
         {0x0AFFFFFF, 2, "Max IP in 10.0.0.0/8"},
         {0xC0A8FFFF, 1, "Max IP in 192.168.0.0/16"},
-
         // Boundary transition cases
         {0xAC1FFFFF, 3, "Upper edge 172.31.255.255 (belongs to /12)"},
         {0xAC200000, 4, "Lower edge 172.32.0.0 (belongs to /11)"},
         {0x0AFFFFFF, 2, "Upper edge 10.255.255.255"},
         {0x0B000000, 0, "Lower edge out of range 11.0.0.0"},
-
         // Random IPs for coverage
         {0x45A3D2F1, 0, "Random IP 69.163.210.241"},
         {0xDEADBEEF, 0, "Special pattern IP 222.173.190.239"}, // Nice
@@ -540,9 +533,54 @@ int test_lookup() {
         fails += _test_lookup(tests[i].ip, trie, tests[i].expected);
     }
 
+    // Test case 2
+    printf("\n-== Testing with Trie 2 ==-\n");
+    TrieNode *trie2 = build_test_trie2();
+    print_trie(trie2, NULL, NULL, 0);
+
+    struct {
+        uint32_t ip;
+        int expected;
+        const char *comment;
+    } tests2[] = {
+        // Default route fallback (requires backtracking)
+        {str_to_ip("0.0.0.1"),          1, "(Requires backtracking)"},
+        {str_to_ip("255.255.255.255"),  1, "(Requires backtracking)"},
+        // 0.1.0.0/16
+        {str_to_ip("0.1.0.0"),          2},
+        // 10.0.0.0/8 and subnets
+        {str_to_ip("10.0.0.0"),        10},
+        {str_to_ip("10.1.0.0"),        11},
+        {str_to_ip("10.3.0.0"),         3},
+        {str_to_ip("10.7.0.0"),        17},
+        {str_to_ip("10.10.0.0"),        3, "(Requires backtracking)"},
+        // 172.16.0.0/12 and subnets
+        {str_to_ip("172.16.0.1"),       5, "(Requires backtracking)"},
+        {str_to_ip("172.20.255.255"),  20},
+        {str_to_ip("172.21.0.0"),      21},
+        {str_to_ip("172.23.0.0"),      23},
+        {str_to_ip("172.23.0.2"),      23},
+        // 192.168.1.0/24
+        {str_to_ip("192.168.1.50"),   101},
+        // False matches
+        {str_to_ip("1.1.0.1"),          1, "(False match for 2)"},
+        {str_to_ip("193.168.1.1"),      1, "(False match for 101)"},
+        // None
+        {str_to_ip("192.168.0.50"),     1, "(Requires backtracking)"},
+        {str_to_ip("222.173.190.329"),  1}, // 0xDEADBEEF
+        {str_to_ip("18.52.86.120"),     1}, // 0x12345678
+    };
+
+    for (int i = 0; i < sizeof(tests2) / sizeof(tests2[0]); i++) {
+        const char *hint = tests2[i].comment ? tests2[i].comment : "";
+        printf("\n--- Test Case %d %s ---\n", i+1, hint);
+        fails += _test_lookup(tests2[i].ip, trie2, tests2[i].expected);
+    }
+
     TEST_REPORT("lookup", fails);
 
     free_trie(trie);
+    free_trie(trie2);
 
     return fails;
 }
@@ -671,15 +709,19 @@ void sprint_bits(char *dest, int value, int bits, int nibble_offset) {
     }
 }
 
+ip_addr_t str_to_ip(const char *ip_str) {
+    unsigned int a, b, c, d;
+    sscanf(ip_str, "%u.%u.%u.%u", &a, &b, &c, &d);
+    return (a << 24) | (b << 16) | (c << 8) | d;
+}
+
 // Helper function to create a rule
 Rule make_rule(const char *ip, uint8_t len, int iface) {
-    Rule r;
-    unsigned int a, b, c, d;
-    sscanf(ip, "%u.%u.%u.%u", &a, &b, &c, &d);
-    r.prefix = (a << 24) | (b << 16) | (c << 8) | d;
-    r.prefix_len = len;
-    r.out_iface = iface;
-    return r;
+    return (Rule){
+        .prefix = str_to_ip(ip),
+        .prefix_len = len,
+        .out_iface = iface
+    };
 }
 
 // Helper function to compare two tries
