@@ -439,6 +439,7 @@ uint32_t lookup_ip(ip_addr_t ip_addr, TrieNode *trie, int *access_count) {
     uint32_t out_iface;
 
     while(1) {
+        (*access_count)++;
         out_iface = rule_match(match, ip_addr) ? match->out_iface : 0;
         if (out_iface != 0) {
             DEBUG_PRINT("    Match found: %d\n", out_iface);
