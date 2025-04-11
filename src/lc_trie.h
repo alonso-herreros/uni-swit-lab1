@@ -6,9 +6,8 @@
 #include <stdbool.h> // For the bool type
 
 // ==== Constants ====
-#ifndef FILL_FACTOR
-#define FILL_FACTOR 1 // Determines how densely populated branches must be
-
+#ifndef FILL_FACTOR     // Can be overridden at compile time
+#define FILL_FACTOR 1.0 // Determines how densely populated branches must be
 #endif
 
 // ==== Data Types ====
@@ -101,10 +100,13 @@ uint32_t count_nodes_trie(TrieNode *trie);
  *
  * @param ip_addr The IP address to look up.
  * @param trie Pointer to the root node of the LC-Trie.
+ * @param[out] access_count Number of node accesses during the lookup. Will be
+ *      overwritten, not added to. Pass NULL to ignore.
  *
- * @return The outgoing interface associated with the longest matching prefix.
+ * @return The outgoing interface associated with the longest matching prefix,
+ *      or 0 if no rules match.
  */
-uint32_t lookup_ip(ip_addr_t ip_addr, TrieNode *trie);
+uint32_t lookup_ip(ip_addr_t ip_addr, TrieNode *trie, int *access_count);
 
 // Not going to add a 'compress_trie' function since the trie is born
 // compressed
@@ -119,6 +121,7 @@ uint8_t compute_skip(const Rule *group, size_t group_size, uint8_t pre_skip);
 
 Rule *compute_default(const Rule *group, size_t group_size, uint8_t pre_skip);
 
-bool prefix_match(const Rule *rule, ip_addr_t address);
+bool rule_match(const Rule *rule, ip_addr_t address);
+bool prefix_match(ip_addr_t ip1, ip_addr_t ip2, uint8_t len);
 
 #endif // LC_TRIE_H

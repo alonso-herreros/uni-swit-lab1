@@ -124,13 +124,17 @@ TrieNode *read_trie() {
     DEBUG_PRINT("Read trie enter\n");
     int rule_count = 0;
     Rule *rules = read_rules(&rule_count);
-    DEBUG_PRINT("Read rules done\n");
+    DEBUG_PRINT("Read rules done (%d rules)\n", rule_count);
 
-    TrieNode *root = create_trie(rules, rule_count);
-    DEBUG_PRINT("Create trie done\n");
-    // Since create_trie creates a copy of the rules, we can free them
+    Rule *sorted = sort_rules(rules, rule_count);
     free(rules);
-    DEBUG_PRINT("Free rules done\n");
+    DEBUG_PRINT("Sort rules done\n");
+
+    TrieNode *root = create_trie(sorted, rule_count);
+    DEBUG_PRINT("Create trie done, root at %p\n", root);
+    // Since create_trie doesn't create a copy of the rules yet
+    // free(sorted);
+    // DEBUG_PRINT("Free rules done\n");
 
     return root;
 }
@@ -172,6 +176,7 @@ Rule *read_rules(int *rule_count) {
 
     // Should we trim the array to the actual size, or leave some slack?
     rules = realloc(rules, sizeof(Rule) * size);
+    *rule_count = size;
 
     return rules;
 }
@@ -188,7 +193,7 @@ int profiled_lookup(
     // TODO: Pass tableAccessCount to lookup_ip (check #16)
     // Timed IP lookup
     clock_gettime(CLOCK_MONOTONIC_RAW, &initialTime);
-    outInterface = lookup_ip(ip_address, root);
+    outInterface = lookup_ip(ip_address, root, &tableAccessCount);
     clock_gettime(CLOCK_MONOTONIC_RAW, &finalTime);
 
     double searchingTime; // Set by printOutputLine

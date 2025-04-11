@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <string.h>
 
 #include "../src/lc_trie.h"
 #include <stdio.h>
@@ -22,6 +23,8 @@
 
 // ==== Prototypes ====
 
+ip_addr_t str_to_ip(const char *ip_str);
+
 Rule make_rule(const char *ip, uint8_t len, int iface);
 void print_rules(const Rule *rules, size_t count);
 void print_rule(const Rule *rule);
@@ -32,7 +35,13 @@ TrieNode *create_internal(uint8_t branch, uint8_t skip, TrieNode **children);
 void print_node(const TrieNode *node);
 int eq_nodes(const TrieNode *a, const TrieNode *b);
 
+void sprint_bits(char *dest, int value, int bits, int nibble_offset);
+void print_trie(const TrieNode *trie, char *tree_prefix, char *match_prefix,
+        int pre_skip);
+
+int eq_tries(const TrieNode *a, const TrieNode *b);
 TrieNode *build_test_trie();
+TrieNode *build_test_trie2();
 
 
 // ==== Test functions ====
@@ -230,40 +239,56 @@ int test_compute_default() {
     int fails = 0;
 
     // Test case 1
-    printf("\n--- Test Case 1 (With default route) ---\n");
+    printf("\n--- Test Case 1 (All-encompassing default) ---\n");
     Rule rules1[] = {
         make_rule("0.0.0.0", 0, 1), // Default route
+        make_rule("192.168.0.0", 24, 3),
         make_rule("192.168.1.0", 24, 2),
-        make_rule("192.168.0.0", 16, 3)
     };
-
     fails += _test_compute_default(rules1, 3, 0, &(rules1[0]));
 
     // Test case 2
-    printf("\n--- Test Case 2 (No default route) ---\n");
+    printf("\n--- Test Case 2 (Same IP, different length) ---\n");
     Rule rules2[] = {
-        make_rule("192.168.1.0", 24, 1),
-        make_rule("192.168.0.0", 16, 2)};
-
-    fails += _test_compute_default(rules2, 2, 0, NULL);
+        make_rule("192.168.0.0", 16, 2),
+        make_rule("192.168.0.0", 24, 1),
+    };
+    fails += _test_compute_default(rules2, 2, 0, &(rules2[1]));
 
     // Test case 3
-    printf("\n--- Test Case 3 (Default at end) ---\n");
+    printf("\n--- Test Case 3 (Linear group) ---\n");
     Rule rules3[] = {
-        make_rule("192.168.1.0", 24, 1),
         make_rule("192.168.0.0", 16, 2),
-        make_rule("0.0.0.0", 0, 3) // Default route at end
+        make_rule("192.168.128.0", 20, 1),
+        make_rule("192.168.129.0", 24, 1),
     };
-
     fails += _test_compute_default(rules3, 3, 0, &(rules3[2]));
+
+    // Test case 4
+    printf("\n--- Test Case 4 (Inner default) ---\n");
+    Rule rules4[] = {
+        make_rule("0.0.0.0", 0, 3),
+        make_rule("192.168.0.0", 16, 2),
+        make_rule("192.168.0.0", 24, 1),
+        make_rule("192.168.1.0", 24, 1),
+    };
+    fails += _test_compute_default(rules4, 4, 0, &(rules4[1]));
+
+    // Test case 5
+    printf("\n--- Test Case 5 (No default) ---\n");
+    Rule rules5[] = {
+        make_rule("192.168.0.0", 24, 1),
+        make_rule("192.168.1.0", 24, 1),
+    };
+    fails += _test_compute_default(rules5, 2, 0, NULL);
 
     TEST_REPORT("compute_default", fails);
 
     return fails;
 }
 
-// Wrapper function for prefix_match
-int _test_prefix_match(Rule *rule, const char *ip_str, bool expected) {
+// Wrapper function for rule_match
+int _test_rule_match(Rule *rule, const char *ip_str, bool expected) {
     printf("Testing '%s' against rule: ", ip_str);
     print_rule(rule);
 
@@ -272,7 +297,7 @@ int _test_prefix_match(Rule *rule, const char *ip_str, bool expected) {
     sscanf(ip_str, "%u.%u.%u.%u", &a, &b, &c, &d);
     ip = (a << 24) | (b << 16) | (c << 8) | d;
 
-    bool match = prefix_match(rule, ip);
+    bool match = rule_match(rule, ip);
     printf("Match: %s (expected: %s)\n",
         match ? "true" : "false",
         expected ? "true" : "false");
@@ -284,9 +309,9 @@ int _test_prefix_match(Rule *rule, const char *ip_str, bool expected) {
     return 0;
 }
 
-// Test collection for prefix_match
-int test_prefix_match() {
-    printf("\n=== Testing prefix_match ===\n");
+// Test collection for rule_match
+int test_rule_match() {
+    printf("\n=== Testing rule_match ===\n");
     int fails = 0;
 
     Rule rule = make_rule("192.168.1.0", 24, 1);
@@ -303,10 +328,10 @@ int test_prefix_match() {
 
     for (size_t i = 0; i < 5; i++) {
         printf("\n--- Test Case %zu ---\n", i + 1);
-        fails += _test_prefix_match(&rule, cases[i].ip, cases[i].expected);
+        fails += _test_rule_match(&rule, cases[i].ip, cases[i].expected);
     }
 
-    TEST_REPORT("prefix_match", fails);
+    TEST_REPORT("rule_match", fails);
 
     return fails;
 }
@@ -326,6 +351,36 @@ int _inspect_node(TrieNode *node, TrieNode *expected) {
     return 0;
 }
 
+// Wrapper function to test create_trie
+int _test_create_trie(Rule *rules, size_t num_rules, TrieNode *expected_root) {
+    printf("Input rules:\n");
+    print_rules(rules, num_rules);
+
+    TrieNode *trie = create_trie(rules, num_rules);
+    printf("Trie created:\n");
+    print_trie(trie, NULL, NULL, 0);
+
+    printf("Expected:\n");
+    print_trie(expected_root, NULL, NULL, 0);
+
+    if (!eq_tries(trie, expected_root)) {
+        free_trie(trie);
+        TEST_FAIL("Tries are not equal\n");
+    }
+
+    if (trie == NULL && expected_root != NULL) {
+        free_trie(trie);
+        TEST_FAIL("Trie creation failed\n");
+    } else if (expected_root == NULL && trie != NULL) {
+        free_trie(trie);
+        TEST_FAIL("Expected NULL trie, returned %p\n", trie);
+    }
+
+    free_trie(trie);
+
+    return 0;
+}
+
 // Test collection for create_trie
 int test_create_trie() {
     printf("\n=== Testing create_trie ===\n");
@@ -338,55 +393,73 @@ int test_create_trie() {
         make_rule("192.168.2.0", 24, 2),
         make_rule("192.168.3.0", 24, 3) // Default route
     };
+    size_t nrules1 = sizeof(rules1) / sizeof(rules1[0]);
 
-    printf("Input rules:\n");
-    print_rules(rules1, sizeof(rules1) / sizeof(rules1[0]));
-    // Sort rules (create_trie currently expects sorted rules)
-    Rule *sorted1 = sort_rules(rules1, sizeof(rules1) / sizeof(rules1[0]));
-    printf("\nSorted rules:\n");
-    print_rules(sorted1, 3);
+    // Manual construction of the expected trie
+    TrieNode *root = calloc(1, sizeof(TrieNode));
+    *root = (TrieNode){.skip = 22, .branch = 1};
 
-    TrieNode *trie = create_trie(sorted1, sizeof(rules1) / sizeof(rules1[0]));
-    if (trie == NULL) {
-        TEST_FAIL("Trie creation FAILED: returned NULL\n");
-    }
+    // * (s22 b1)
+    TrieNode *children = calloc(2, sizeof(TrieNode));
+    root->pointer = children;
+    children[0] = (TrieNode){.skip = 0, .branch = 0, .pointer = &rules1[0]};
+    children[1] = (TrieNode){.skip = 0, .branch = 1}; // ?{22} 1*
 
-    // Inspecting root
-    printf("\nInspecting root:\n");
-    TrieNode expected_root = {.branch=1, .skip=22, .pointer=NULL};
-    fails += _inspect_node(trie, &expected_root);
+    // ???? ???? ???? ???? ???? ??1* (s0 b1)
+    TrieNode *children1 = calloc(2, sizeof(TrieNode));
+    children[1].pointer = children1;
+    children1[0] = (TrieNode){.skip = 0, .branch = 0, .pointer = &rules1[1]};
+    children1[1] = (TrieNode){.skip = 0, .branch = 0, .pointer = &rules1[2]};
 
-    // Inspecting first child
-    printf("\nInspecting first child:\n");
-    TrieNode *child = trie->pointer;
-    TrieNode expected_child1 = {.skip=0, .branch=0, .pointer=&sorted1[0]};
-    fails += _inspect_node(child, &expected_child1);
-
-    // Inspecting second child
-    printf("\nInspecting second child:\n");
-    TrieNode *child2 = (TrieNode *) trie->pointer+1;
-    TrieNode expected_child2 = {.skip=0, .branch=1, .pointer=NULL};
-    fails += _inspect_node(child2, &expected_child2);
-
-    // Inspecting second child's children
-    printf("\nInspecting second child's children:\n");
-    TrieNode *child21 = (TrieNode *) child2->pointer;
-    TrieNode expected_child21 = {.skip=0, .branch=0, .pointer=&sorted1[1]};
-    fails += _inspect_node(child21, &expected_child21);
-    TrieNode *child22 = (TrieNode *) child2->pointer + 1;
-    TrieNode expected_child22 = {.skip=0, .branch=0, .pointer=&sorted1[2]};
-    fails += _inspect_node(child22, &expected_child22);
-
-    free(sorted1);
-    /* free_trie(trie); */
+    fails += _test_create_trie(rules1, nrules1, root);
 
     // Test case 2
     printf("\n--- Test Case 2: Empty trie ---\n");
-    TrieNode *empty_trie = create_trie(NULL, 0);
-    if (empty_trie != NULL) {
-        printf("! TEST FAIL ! Expected NULL Trie for empty rules\n");
-        free(empty_trie);
-        fails += 1;
+    fails += _test_create_trie(NULL, 0, NULL);
+
+    // Test case 3
+    printf("\n--- Test Case 3: Single rule ---\n");
+    Rule rules3[] = {
+        make_rule("0.0.0.0", 0, 1),
+    };
+    size_t nrules3 = sizeof(rules3) / sizeof(rules3[0]);
+
+    // Manual construction of the expected trie
+    TrieNode *root3 = calloc(1, sizeof(TrieNode));
+    *root3 = (TrieNode){.skip = 0, .branch = 0, .pointer = &rules3[0]};
+
+    fails += _test_create_trie(rules3, nrules3, root3);
+
+    // Test case 4
+    printf("\n--- Test Case 4: Complex trie ---\n");
+    Rule rules[] = { // Same rules as in build_test_trie2
+        make_rule("0.0.0.0",     0,  1),   // Default route
+        make_rule("0.1.0.0",     16, 2),
+        make_rule("10.0.0.0",    8,  3),
+        make_rule("10.0.0.0",    16, 10),
+        make_rule("10.1.0.0",    16, 11),
+        make_rule("10.2.0.0",    16, 12),
+        make_rule("10.4.0.0",    16, 14),
+        make_rule("10.5.0.0",    16, 15),
+        make_rule("10.6.0.0",    16, 16),
+        make_rule("10.7.0.0",    16, 17),
+        make_rule("172.16.0.0",  12, 5),
+        make_rule("172.20.0.0",  16, 20),
+        make_rule("172.21.0.0",  16, 21),
+        make_rule("172.22.0.0",  16, 22),
+        make_rule("172.23.0.0",  16, 23),
+        make_rule("192.168.1.0", 24, 101),
+    };
+    size_t nrules4 = sizeof(rules) / sizeof(rules[0]);
+
+    TrieNode *root4 = build_test_trie2();
+    fails += _test_create_trie(rules, nrules4, root4);
+    free(root4);
+
+    if (FILL_FACTOR > 0.875) {
+        printf("^!! WARNING: test required FILL_FACTOR > 0.875, but it's %f\n"
+               "    Try compiling with -DFILL_FACTOR=0.875 or lower\n",
+                1.0*FILL_FACTOR);
     }
 
     TEST_REPORT("create_trie", fails);
@@ -394,109 +467,6 @@ int test_create_trie() {
     return fails;
 }
 
-/*
-// Test wrapper for lookup
-int _test_lookup(ip_addr_t ip, TrieNode *trie, int expected) {
-    int result = lookup_ip(ip, trie);
-    printf("IP: %08X -> Result: %d (Expected: %d)\n\n", ip, result, expected);
-
-    if (result != expected) {
-        TEST_FAIL("Wrong match\n");
-    }
-
-    return 0;
-}
-
-// Test collection for lookups
-int test_lookup() {
-    int fails = 0;
-
-    // Build test trie
-    TrieNode *trie = build_test_trie();
-
-    // Test cases
-    struct
-    {
-        uint32_t ip;
-        int expected;
-        const char *description;
-    } tests[] = {
-
-        {0x0AC86432, 2, "10.200.100.50"},    // 10.200.100.50
-        {0xAC100A0A, 3, "172.16.10.10"},    // 172.16.10.10
-        {0xC0A8010A, 1, "192.168.1.10"},    // 192.168.1.10
-        {0x0AFFFFFF, 2, "10.255.255.255"},    // 10.255.255.255
-        {0xDFFFFFFF, 0, "223.255.255.255"},    // 223.255.255.255
-        {0x00000101, 0, "0.0.1.1"},    // 0.0.1.1
-        {0xAC3FFF00, 4, "172.63.255.255"},    // 172.63.255.255
-        {0xC0323232, 0, "192.50.50.50 Out of range (Below the range)"},    // 192.50.50.50 /FAILS
-        {0xFFFFFF00, 0, "255.255.255.0"},    // 255.255.255.0
-        {0xAC100001, 3, "172.16.0.1"},    // 172.16.0.1
-        {0xAC20000A, 4, "172.32.0.10"},    // 172.32.0.10
-        {0xC0A83232, 1, "192.168.50.50"},    // 192.50.50.50 /FAILS
-        {0xC0A8010A, 1, "192.168.1.10"},    // 192.168.1.10
-        {0xFFFF0000, 0, "255.255.0.0"},   // 255.255.0.0
-
-        // Tests for 192.168.0.0/16 (port 1)
-        {0xC0A80000, 1, "Lower bound 192.168.0.0"},
-        {0xC0A80101, 1, "Typical IP 192.168.1.1"},
-        {0xC0A8FFFF, 1, "Upper bound 192.168.255.255"},
-        {0xC0A7FFFF, 0, "Out of range 192.167.255.255"},
-        {0xC0A90000, 0, "Out of range 192.169.0.0"},
-
-        // Tests for 10.0.0.0/8 (port 2)
-        {0x0A000000, 2, "Lower bound 10.0.0.0"},
-        {0x0A010203, 2, "Typical IP 10.1.2.3"},
-        {0x0AFFFFFF, 2, "Upper bound 10.255.255.255"},
-        {0x09000000, 0, "Out of range 9.0.0.0"},
-        {0x0B000000, 0, "Out of range 11.0.0.0"},
-
-        // Tests for 172.16.0.0/12 (port 3)
-        {0xAC100000, 3, "Lower bound 172.16.0.0"},
-        {0xAC101234, 3, "Typical IP 172.16.18.52"},
-        {0xAC1FFFFF, 3, "Upper bound 172.31.255.255"},
-        {0xAC0FFFFF, 0, "Out of range 172.15.255.255"},
-        {0xAC200000, 4, "Out of range (belongs to 172.32.0.0/11)"},
-
-        // Tests for 172.32.0.0/11 (port 4)
-        {0xAC200000, 4, "Lower bound 172.32.0.0"},
-        {0xAC3F1234, 4, "Typical IP 172.63.18.52"},
-        {0xAC3FFFFF, 4, "Upper bound 172.63.255.255"},
-        {0xAC400000, 0, "Out of range 172.64.0.0"},
-
-        // Special cases
-        {0x7F000001, 0, "Loopback 127.0.0.1"},
-        {0x00000000, 0, "Zero address"},
-        {0xFFFFFFFF, 0, "Broadcast address"},
-        {0x0AFFFFFF, 2, "Max IP in 10.0.0.0/8"},
-        {0xC0A8FFFF, 1, "Max IP in 192.168.0.0/16"},
-
-        // Boundary transition cases
-        {0xAC1FFFFF, 3, "Upper edge 172.31.255.255 (belongs to /12)"},
-        {0xAC200000, 4, "Lower edge 172.32.0.0 (belongs to /11)"},
-        {0x0AFFFFFF, 2, "Upper edge 10.255.255.255"},
-        {0x0B000000, 0, "Lower edge out of range 11.0.0.0"},
-
-        // Random IPs for coverage
-        {0x45A3D2F1, 0, "Random IP 69.163.210.241"},
-        {0xDEADBEEF, 0, "Special pattern IP 222.173.190.239"}, // Nice
-        {0x12345678, 0, "Special pattern IP 18.52.86.120"}
-    };
-
-    printf("\n=== Running lookup tests ===\n");
-    for (int i = 0; i < sizeof(tests) / sizeof(tests[0]); i++)
-    {
-        printf("--- Test Case %d: ", i+1 );
-        printf("%s ---\n", tests[i].description);
-        fails += _test_lookup(tests[i].ip, trie, tests[i].expected);
-    }
-
-    TEST_REPORT("lookup", fails);
-
-    free_trie(trie);
-
-    return fails;
-}*/
 
 // Test function for count_nodes_trie
 int test_count_nodes() {
@@ -533,6 +503,152 @@ int test_count_nodes() {
 }
 
 
+// Test wrapper for lookup
+int _test_lookup(ip_addr_t ip, TrieNode *trie, int expected) {
+    int access_count = 0;
+    int result = lookup_ip(ip, trie, &access_count);
+
+    char ip_str[16];
+    sprintf(ip_str, "%u.%u.%u.%u",
+            (ip >> 24) & 0xFF, (ip >> 16) & 0xFF,
+            (ip >> 8) & 0xFF, ip & 0xFF);
+    printf("IP: %-15s -> Result: %d (Expected: %d) in %d accesses\n",
+            ip_str, result, expected, access_count);
+
+    if (result != expected) {
+        TEST_FAIL("Wrong match\n");
+    }
+
+    return 0;
+}
+
+// Test collection for lookups
+int test_lookup() {
+    printf("\n=== Testing lookup ===\n");
+    int fails = 0;
+
+    // Build test trie
+    TrieNode *trie = build_test_trie();
+    printf("\n-== Testing with Trie 1 ==-\n");
+    print_trie(trie, NULL, NULL, 0);
+
+    // Test cases
+    struct {
+        uint32_t ip;
+        int expected;
+        const char *description;
+    } tests[] = {
+        {0x0AC86432, 2, "10.200.100.50"},    // 10.200.100.50
+        {0xAC100A0A, 3, "172.16.10.10"},    // 172.16.10.10
+        {0xC0A8010A, 1, "192.168.1.10"},    // 192.168.1.10
+        {0x0AFFFFFF, 2, "10.255.255.255"},    // 10.255.255.255
+        {0xDFFFFFFF, 0, "223.255.255.255"},    // 223.255.255.255
+        {0x00000101, 0, "0.0.1.1"},    // 0.0.1.1
+        {0xAC3FFF00, 4, "172.63.255.255"},    // 172.63.255.255
+        {0xC0323232, 0, "192.50.50.50 Out of range (Below the range)"},    // 192.50.50.50 /FAILS
+        {0xFFFFFF00, 0, "255.255.255.0"},    // 255.255.255.0
+        {0xAC100001, 3, "172.16.0.1"},    // 172.16.0.1
+        {0xAC20000A, 4, "172.32.0.10"},    // 172.32.0.10
+        {0xC0A83232, 1, "192.168.50.50"},    // 192.50.50.50 /FAILS
+        {0xC0A8010A, 1, "192.168.1.10"},    // 192.168.1.10
+        {0xFFFF0000, 0, "255.255.0.0"},   // 255.255.0.0
+        // Tests for 192.168.0.0/16 (port 1)
+        {0xC0A80000, 1, "Lower bound 192.168.0.0"},
+        {0xC0A80101, 1, "Typical IP 192.168.1.1"},
+        {0xC0A8FFFF, 1, "Upper bound 192.168.255.255"},
+        {0xC0A7FFFF, 0, "Out of range 192.167.255.255"},
+        {0xC0A90000, 0, "Out of range 192.169.0.0"},
+        // Tests for 10.0.0.0/8 (port 2)
+        {0x0A000000, 2, "Lower bound 10.0.0.0"},
+        {0x0A010203, 2, "Typical IP 10.1.2.3"},
+        {0x0AFFFFFF, 2, "Upper bound 10.255.255.255"},
+        {0x09000000, 0, "Out of range 9.0.0.0"},
+        {0x0B000000, 0, "Out of range 11.0.0.0"},
+        // Tests for 172.16.0.0/12 (port 3)
+        {0xAC100000, 3, "Lower bound 172.16.0.0"},
+        {0xAC101234, 3, "Typical IP 172.16.18.52"},
+        {0xAC1FFFFF, 3, "Upper bound 172.31.255.255"},
+        {0xAC0FFFFF, 0, "Out of range 172.15.255.255"},
+        {0xAC200000, 4, "Out of range (belongs to 172.32.0.0/11)"},
+        // Tests for 172.32.0.0/11 (port 4)
+        {0xAC200000, 4, "Lower bound 172.32.0.0"},
+        {0xAC3F1234, 4, "Typical IP 172.63.18.52"},
+        {0xAC3FFFFF, 4, "Upper bound 172.63.255.255"},
+        {0xAC400000, 0, "Out of range 172.64.0.0"},
+        // Special cases
+        {0x7F000001, 1, "Loopback 127.0.0.1"},
+        {0x00000000, 0, "Zero address"},
+        {0xFFFFFFFF, 0, "Broadcast address"},
+        {0x0AFFFFFF, 2, "Max IP in 10.0.0.0/8"},
+        {0xC0A8FFFF, 1, "Max IP in 192.168.0.0/16"},
+        // Boundary transition cases
+        {0xAC1FFFFF, 3, "Upper edge 172.31.255.255 (belongs to /12)"},
+        {0xAC200000, 4, "Lower edge 172.32.0.0 (belongs to /11)"},
+        {0x0AFFFFFF, 2, "Upper edge 10.255.255.255"},
+        {0x0B000000, 0, "Lower edge out of range 11.0.0.0"},
+        // Random IPs for coverage
+        {0x45A3D2F1, 1, "Random IP 69.163.210.241"},
+        {0xDEADBEEF, 0, "Special pattern IP 222.173.190.239"}, // Nice
+        {0x12345678, 0, "Special pattern IP 18.52.86.120"}
+    };
+
+    for (int i = 0; i < sizeof(tests) / sizeof(tests[0]); i++) {
+        // printf("\n--- Test Case %d: %s ---\n", i+1, tests[i].description);
+        fails += _test_lookup(tests[i].ip, trie, tests[i].expected);
+    }
+
+    // Test case 2
+    printf("\n-== Testing with Trie 2 ==-\n");
+    TrieNode *trie2 = build_test_trie2();
+    print_trie(trie2, NULL, NULL, 0);
+
+    struct {
+        uint32_t ip;
+        int expected;
+        const char *comment;
+    } tests2[] = {
+        // Default route fallback (requires backtracking)
+        {str_to_ip("0.0.0.1"),          1, "(Requires backtracking)"},
+        {str_to_ip("255.255.255.255"),  1, "(Requires backtracking)"},
+        // 0.1.0.0/16
+        {str_to_ip("0.1.0.0"),          2},
+        // 10.0.0.0/8 and subnets
+        {str_to_ip("10.0.0.0"),        10},
+        {str_to_ip("10.1.0.0"),        11},
+        {str_to_ip("10.3.0.0"),         3},
+        {str_to_ip("10.7.0.0"),        17},
+        {str_to_ip("10.10.0.0"),        3, "(Requires backtracking)"},
+        // 172.16.0.0/12 and subnets
+        {str_to_ip("172.16.0.1"),       5, "(Requires backtracking)"},
+        {str_to_ip("172.20.255.255"),  20},
+        {str_to_ip("172.21.0.0"),      21},
+        {str_to_ip("172.23.0.0"),      23},
+        {str_to_ip("172.23.0.2"),      23},
+        // 192.168.1.0/24
+        {str_to_ip("192.168.1.50"),   101},
+        // False matches
+        {str_to_ip("1.1.0.1"),          1, "(False match for 2)"},
+        {str_to_ip("193.168.1.1"),      1, "(False match for 101)"},
+        // None
+        {str_to_ip("192.168.0.50"),     1, "(Requires backtracking)"},
+        {str_to_ip("222.173.190.329"),  1}, // 0xDEADBEEF
+        {str_to_ip("18.52.86.120"),     1}, // 0x12345678
+    };
+
+    for (int i = 0; i < sizeof(tests2) / sizeof(tests2[0]); i++) {
+        const char *hint = tests2[i].comment ? tests2[i].comment : "";
+        printf("\n--- Test Case %d %s ---\n", i+1, hint);
+        fails += _test_lookup(tests2[i].ip, trie2, tests2[i].expected);
+    }
+
+    TEST_REPORT("lookup", fails);
+
+    free_trie(trie);
+    free_trie(trie2);
+
+    return fails;
+}
+
 
 // ==== Helper functions ====
 
@@ -556,6 +672,9 @@ void print_rules(const Rule *rules, size_t count) {
 }
 
 int eq_rules(const Rule *a, const Rule *b) {
+    if (a == NULL || b == NULL) {
+        return 0;
+    }
     return (a->prefix == b->prefix &&
             a->prefix_len == b->prefix_len &&
             a->out_iface == b->out_iface);
@@ -587,59 +706,152 @@ int eq_nodes(const TrieNode *a, const TrieNode *b) {
             (b->pointer == NULL || a->pointer == b->pointer));
 }
 
-// Helper function to create a rule
-Rule make_rule(const char *ip, uint8_t len, int iface) {
-    Rule r;
-    unsigned int a, b, c, d;
-    sscanf(ip, "%u.%u.%u.%u", &a, &b, &c, &d);
-    r.prefix = (a << 24) | (b << 16) | (c << 8) | d;
-    r.prefix_len = len;
-    r.out_iface = iface;
-    return r;
+// Print the structure of a trie
+void print_trie(const TrieNode *trie, char *tree_prefix, char *match_prefix,
+        int pre_skip) {
+    const static size_t STRING_LENGTH = 321;
+
+    if (trie==NULL) {
+        printf("<NULL TRIE>\n");
+        return;
+    }
+
+    bool root = 0; // This allows us to skip indenting the whole trie
+    if (tree_prefix == NULL || match_prefix == NULL) {
+        tree_prefix = match_prefix = ""; // Initialize both
+        root = 1;
+    }
+
+    int skip = trie->skip;
+    int branch = trie->branch;
+
+    // Print the current node's 'path'
+    printf("%s%s%s* (s%d b%d)", tree_prefix, root?"":"|-", match_prefix,
+            skip, branch);
+
+    if (branch == 0) { // Print the associated rule
+        if (trie->pointer != NULL) {
+            printf(": ");
+            print_rule((Rule *)trie->pointer);
+        } else {
+            printf("::\n");
+        }
+        return;
+    } else { // Print a line terminator
+        printf(";\n");
+    }
+
+    // Recursion adding prefixes
+    char new_tree_prefix[STRING_LENGTH];
+    sprintf(new_tree_prefix, "%s%s", tree_prefix, root?"":"| ");
+
+    char new_match_prefix[STRING_LENGTH];
+    memcpy(new_match_prefix, match_prefix, STRING_LENGTH);
+    sprint_bits(new_match_prefix, -1, skip, pre_skip);
+
+    int max_children = 1 << branch;
+    for (int i = 0; i < max_children; i++) {
+        char child_match_prefix[STRING_LENGTH];
+        memcpy(child_match_prefix, new_match_prefix, STRING_LENGTH);
+        sprint_bits(child_match_prefix, i, branch, pre_skip+skip);
+
+        TrieNode *child = (TrieNode *)trie->pointer + i;
+        print_trie(child, new_tree_prefix, child_match_prefix,
+                pre_skip+skip+branch);
+    }
 }
 
-/**
- * Builds a test LC-Trie structure with sample routing entries
+void sprint_bits(char *dest, int value, int bits, int nibble_offset) {
+    /* memcpy(dest, "", 1); */
+    for (int i=0; i < bits; i++) {
+        int bit_pos = i + nibble_offset;
+        if (bit_pos != 0 && bit_pos % 4 == 0) {
+            sprintf(dest, "%s ", dest);
+        }
+        if (value < 0) { // Interpret value < 0 as printing '?'s
+            sprintf(dest, "%s?", dest);
+        } else {
+            sprintf(dest, "%s%d", dest, (value >> (bits-i-1)) & 1);
+        }
+    }
+}
+
+ip_addr_t str_to_ip(const char *ip_str) {
+    unsigned int a, b, c, d;
+    sscanf(ip_str, "%u.%u.%u.%u", &a, &b, &c, &d);
+    return (a << 24) | (b << 16) | (c << 8) | d;
+}
+
+// Helper function to create a rule
+Rule make_rule(const char *ip, uint8_t len, int iface) {
+    return (Rule){
+        .prefix = str_to_ip(ip),
+        .prefix_len = len,
+        .out_iface = iface
+    };
+}
+
+// Helper function to compare two tries
+int eq_tries(const TrieNode *a, const TrieNode *b) {
+    if (a == NULL && b == NULL) return 1;
+    if (a == NULL || b == NULL) return 0;
+
+    if (a->skip != b->skip || a->branch != b->branch) {
+        return 0;
+    }
+
+    if (a->branch == 0) { // Implies b->branch == 0
+        return eq_rules((Rule *)a->pointer, (Rule *)b->pointer);
+    }
+
+    int max_children = 1 << a->branch;
+    for (int i = 0; i < max_children; i++) {
+        TrieNode *child_a = (TrieNode *)a->pointer + i;
+        TrieNode *child_b = (TrieNode *)b->pointer + i;
+        if (!eq_tries(child_a, child_b)) return 0;
+    }
+    return 1;
+}
+
+
+/** Builds a test LC-Trie structure with sample routing entries
+ *
+ * @note The trie does not have a 100% fill factor, that's why
+ *      the default route is not at the root.
+ *
  * @return Pointer to the root of the constructed trie
+ * * (s0 b2);
+ * |-00* (s0 b0): 10.0.0.0/8 -> iface 2
+ * |-01* (s0 b0): 0.0.0.0/0 -> iface 1
+ * |-10* (s8 b1);
+ * | |-10?? ???? ??0* (s0 b0): 172.16.0.0/12 -> iface 3
+ * | \-10?? ???? ??1* (s0 b0): 172.32.0.0/11 -> iface 4
+ * \-11* (s0 b0): 192.168.0.0/16 -> iface 1
  */
 TrieNode *build_test_trie() {
-    // Create leaf nodes for each route
-    Rule *leaf1 = calloc(1, sizeof(Rule)); // 192.168.0.0/16
-    leaf1->prefix = 0xC0A80000;
-    leaf1->prefix_len = 16;
-    leaf1->out_iface = 1;
 
-    Rule *leaf2 = calloc(1, sizeof(Rule)); // 10.0.0.0/8
-    leaf2->prefix = 0x0A000000;
-    leaf2->prefix_len = 8;
-    leaf2->out_iface = 2;
-
-    Rule *leaf3 = calloc(1, sizeof(Rule)); // 172.16.0.0/12
-    leaf3->prefix = 0xAC100000;
-    leaf3->prefix_len = 12;
-    leaf3->out_iface = 3;
-
-    Rule *leaf4 = calloc(1, sizeof(Rule)); // 172.32.0.0/11
-    leaf4->prefix = 0xAC200000;
-    leaf4->prefix_len = 11;
-    leaf4->out_iface = 4;
-
-    Rule *default_leaf = calloc(1, sizeof(Rule)); // Default route
-    default_leaf->prefix = 0;
-    default_leaf->prefix_len = 0;
-    default_leaf->out_iface = 0;
+    Rule rules_local[] = {
+        make_rule("0.0.0.0", 0, 1),
+        make_rule("192.168.0.0", 16, 1),
+        make_rule("10.0.0.0", 8, 2),
+        make_rule("172.16.0.0", 12, 3),
+        make_rule("172.32.0.0", 11, 4),
+    };
+    // Allocation required because initialized rules_local is on the stack
+    Rule *rules = malloc(sizeof(rules_local));
+    memcpy(rules, rules_local, sizeof(rules_local));
 
     // Level 2 nodes (for 172.x.x.x routes)
     TrieNode *level2 = calloc(2, sizeof(TrieNode));
-    level2[0] = (TrieNode){.branch = 0, .pointer = leaf3}; // 172.16.0.0/12
-    level2[1] = (TrieNode){.branch = 0, .pointer = leaf4}; // 172.32.0.0/11
+    level2[0] = (TrieNode){.branch = 0, .pointer = &rules[3]}; // 172.16.0.0/12
+    level2[1] = (TrieNode){.branch = 0, .pointer = &rules[4]}; // 172.32.0.0/11
 
     // Level 1 nodes (first 2 bits)
     TrieNode *level1 = calloc(4, sizeof(TrieNode));
-    level1[0] = (TrieNode){.branch = 0, .pointer = leaf2};             // 00 -> 10.0.0.0/8
-    level1[1] = (TrieNode){.branch = 0, .pointer = default_leaf};      // 01 -> Default
-    level1[2] = (TrieNode){.branch = 1, .skip = 8, .pointer = level2}; // 10 -> 172.x.x.x
-    level1[3] = (TrieNode){.branch = 0, .pointer = leaf1};             // 11 -> 192.168.0.0/16
+    level1[0] = (TrieNode){.branch = 0, .pointer = &rules[2]}; // 10.0.0.0/8
+    level1[1] = (TrieNode){.branch = 0, .pointer = &rules[0]}; // 0.0.0.0/0
+    level1[2] = (TrieNode){.branch = 1, .skip = 8, .pointer = level2};
+    level1[3] = (TrieNode){.branch = 0, .pointer = &rules[1]}; // 192.168.0.0/16
 
     // Root node
     TrieNode *root = calloc(1, sizeof(TrieNode));
@@ -649,6 +861,102 @@ TrieNode *build_test_trie() {
 
     return root;
 }
+
+/** Builds a test LC-Trie meant to test fallbacks and backtracking
+ *
+ * @return pointer to the root of the constructed trie
+ *
+ * * (s0 b1): 0.0.0.0/0 -> iface 1;
+ * |-0* (s3 b1);
+ * | |-0??? 0* (s0 b0): 0.1.0.0/16 -> iface 2;
+ * | \-0??? 1* (s8 b3): 10.0.0.0/8 -> iface 3;
+ * | . |-0??? 1??? ???? ?000 (s0 b0): 10.0.0.0/16 -> iface 10;
+ * | . |-0??? 1??? ???? ?001 (s0 b0): 10.1.0.0/16 -> iface 11;
+ * | . |-0??? 1??? ???? ?010 (s0 b0): 10.2.0.0/16 -> iface 12;
+ * | . |-0??? 1??? ???? ?011 (s0 b0)::
+ * | . |-0??? 1??? ???? ?100 (s0 b0): 10.4.0.0/16 -> iface 14;
+ * | . |-0??? 1??? ???? ?101 (s0 b0): 10.5.0.0/16 -> iface 15;
+ * | . |-0??? 1??? ???? ?110 (s0 b0): 10.6.0.0/16 -> iface 16;
+ * | . \-0??? 1??? ???? ?111 (s0 b0): 10.7.0.0/16 -> iface 17;
+ * | .
+ * \-1* (s0 b1);
+ * . |-10* (s12 b2);
+ * . | | ~ 172.16.0.0/12 -> iface 5;
+ * . | |-10?? ???? ???? ??00: 172.20.0.0/16 -> iface 20;
+ * . | |-10?? ???? ???? ??01: 172.21.0.0/16 -> iface 21;
+ * . | |-10?? ???? ???? ??10: 172.22.0.0/16 -> iface 22;
+ * . | \-10?? ???? ???? ??11: 172.23.0.0/16 -> iface 23;
+ * . |
+ * . \-11* (s0 b0): 192.168.1.0/24 -> iface 101;
+ */
+TrieNode *build_test_trie2() {
+
+    Rule rules_local[] = {
+        make_rule("0.0.0.0",     0,  1),   // Default route
+        make_rule("0.1.0.0",     16, 2),
+        make_rule("10.0.0.0",    8,  3),
+        make_rule("10.0.0.0",    16, 10),
+        make_rule("10.1.0.0",    16, 11),
+        make_rule("10.2.0.0",    16, 12),
+        make_rule("10.4.0.0",    16, 14),
+        make_rule("10.5.0.0",    16, 15),
+        make_rule("10.6.0.0",    16, 16),
+        make_rule("10.7.0.0",    16, 17),
+        make_rule("172.16.0.0",  12, 5),
+        make_rule("172.20.0.0",  16, 20),
+        make_rule("172.21.0.0",  16, 21),
+        make_rule("172.22.0.0",  16, 22),
+        make_rule("172.23.0.0",  16, 23),
+        make_rule("192.168.1.0", 24, 101),
+    };
+    // Allocation required because initialized rules_local is on the stack
+    Rule *rules = malloc(16*sizeof(Rule));
+    memcpy(rules, rules_local, sizeof(rules_local));
+
+    TrieNode *root = calloc(1, sizeof(TrieNode));
+    root[0] = (TrieNode){.skip = 0, .branch = 1};
+
+    // * (s0 b1)
+    TrieNode *children = calloc(2, sizeof(TrieNode));
+    children[0] = (TrieNode){.skip = 3, .branch = 1}; // 0*
+    children[1] = (TrieNode){.skip = 0, .branch = 1}; // 1*
+    root[0].pointer = children;
+
+    // 0* (s3 b1)
+    TrieNode *children0 = calloc(2, sizeof(TrieNode));
+    children0[0] = (TrieNode){.skip = 0, .branch = 0, .pointer = &rules[1]};
+    children0[1] = (TrieNode){.skip = 8, .branch = 3}; // 0??? 1*
+    children[0].pointer = children0;
+
+    // 0??? 1* (s8 b3)
+    TrieNode *children01 = calloc(8, sizeof(TrieNode));
+    children01[0] = (TrieNode){.skip = 0, .branch = 0, .pointer = &rules[3]};
+    children01[1] = (TrieNode){.skip = 0, .branch = 0, .pointer = &rules[4]};
+    children01[2] = (TrieNode){.skip = 0, .branch = 0, .pointer = &rules[5]};
+    children01[3] = (TrieNode){.skip = 0, .branch = 0, .pointer = &rules[2]};
+    children01[4] = (TrieNode){.skip = 0, .branch = 0, .pointer = &rules[6]};
+    children01[5] = (TrieNode){.skip = 0, .branch = 0, .pointer = &rules[7]};
+    children01[6] = (TrieNode){.skip = 0, .branch = 0, .pointer = &rules[8]};
+    children01[7] = (TrieNode){.skip = 0, .branch = 0, .pointer = &rules[9]};
+    children0[1].pointer = children01;
+
+    // 1* (s0 b1)
+    TrieNode *children1 = calloc(2, sizeof(TrieNode));
+    children1[0] = (TrieNode){.skip = 12, .branch = 2}; // 10*
+    children1[1] = (TrieNode){.skip = 0, .branch = 0, .pointer = &rules[15]};
+    children[1].pointer = children1;
+
+    // 10* (s8 b2)
+    TrieNode *children10 = calloc(4, sizeof(TrieNode));
+    children10[0] = (TrieNode){.skip = 0, .branch = 0, .pointer = &rules[11]};
+    children10[1] = (TrieNode){.skip = 0, .branch = 0, .pointer = &rules[12]};
+    children10[2] = (TrieNode){.skip = 0, .branch = 0, .pointer = &rules[13]};
+    children10[3] = (TrieNode){.skip = 0, .branch = 0, .pointer = &rules[14]};
+    children1[0].pointer = children10;
+
+    return root;
+}
+
 // Funciones auxiliares (para crear nodos)
 TrieNode *create_leaf(uint32_t prefix, uint8_t len, uint32_t iface)
 {
@@ -696,10 +1004,10 @@ int main() {
     fails += test_compute_branch();
     fails += test_sort_rules();
     fails += test_compute_default();
-    fails += test_prefix_match();
+    fails += test_rule_match();
     fails += test_create_trie();
-    //fails += test_lookup();
     fails += test_count_nodes();
+    fails += test_lookup();
 
     TEST_REPORT("ALL", fails);
 
