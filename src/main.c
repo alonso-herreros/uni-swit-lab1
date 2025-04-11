@@ -170,6 +170,7 @@ Rule *read_rules(int *rule_count) {
         rules[size].prefix = addr;
         rules[size].prefix_len = prefix_len;
         rules[size].out_iface = out_iface;
+        rules[size].parent = NULL;
 
         size++;
     }

@@ -67,6 +67,8 @@ typedef struct Rule {
 
     /// Outgoing interface associated with this rule.
     uint32_t out_iface;
+
+    struct Rule *parent; // Pointer to the parent rule in the hierarchy
 } Rule;
 
 // ==== Function Prototypes ====
