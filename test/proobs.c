@@ -32,6 +32,7 @@ void print_trie(const TrieNode *trie, char *tree_prefix, char *match_prefix,
 
 int eq_tries(const TrieNode *a, const TrieNode *b);
 TrieNode *build_test_trie();
+TrieNode *build_test_trie2();
 
 
 // ==== Test functions ====
@@ -723,6 +724,101 @@ TrieNode *build_test_trie() {
     root->branch = 2;
     root->skip = 0;
     root->pointer = level1;
+
+    return root;
+}
+
+/** Builds a test LC-Trie meant to test fallbacks and backtracking
+ *
+ * @return pointer to the root of the constructed trie
+ *
+ * * (s0 b1): 0.0.0.0/0 -> iface 1;
+ * |-0* (s3 b1);
+ * | |-0??? 0* (s0 b0): 0.1.0.0/16 -> iface 2;
+ * | \-0??? 1* (s8 b3): 10.0.0.0/8 -> iface 3;
+ * | . |-0??? 1??? ???? ?000 (s0 b0): 10.0.0.0/16 -> iface 10;
+ * | . |-0??? 1??? ???? ?001 (s0 b0): 10.1.0.0/16 -> iface 11;
+ * | . |-0??? 1??? ???? ?010 (s0 b0): 10.2.0.0/16 -> iface 12;
+ * | . |-0??? 1??? ???? ?011 (s0 b0)::
+ * | . |-0??? 1??? ???? ?100 (s0 b0): 10.4.0.0/16 -> iface 14;
+ * | . |-0??? 1??? ???? ?101 (s0 b0): 10.5.0.0/16 -> iface 15;
+ * | . |-0??? 1??? ???? ?110 (s0 b0): 10.6.0.0/16 -> iface 16;
+ * | . \-0??? 1??? ???? ?111 (s0 b0): 10.7.0.0/16 -> iface 17;
+ * | .
+ * \-1* (s0 b1);
+ * . |-10* (s12 b2);
+ * . | | ~ 172.16.0.0/12 -> iface 5;
+ * . | |-10?? ???? ???? ??00: 172.20.0.0/16 -> iface 20;
+ * . | |-10?? ???? ???? ??01: 172.21.0.0/16 -> iface 21;
+ * . | |-10?? ???? ???? ??10: 172.22.0.0/16 -> iface 22;
+ * . | \-10?? ???? ???? ??11: 172.23.0.0/16 -> iface 23;
+ * . |
+ * . \-11* (s0 b0): 192.168.1.0/24 -> iface 101;
+ */
+TrieNode *build_test_trie2() {
+
+    Rule rules_local[] = {
+        make_rule("0.0.0.0",     0,  1),   // Default route
+        make_rule("0.1.0.0",     16, 2),
+        make_rule("10.0.0.0",    8,  3),
+        make_rule("10.0.0.0",    16, 10),
+        make_rule("10.1.0.0",    16, 11),
+        make_rule("10.2.0.0",    16, 12),
+        make_rule("10.4.0.0",    16, 14),
+        make_rule("10.5.0.0",    16, 15),
+        make_rule("10.6.0.0",    16, 16),
+        make_rule("10.7.0.0",    16, 17),
+        make_rule("172.16.0.0",  12, 5),
+        make_rule("172.20.0.0",  16, 20),
+        make_rule("172.21.0.0",  16, 21),
+        make_rule("172.22.0.0",  16, 22),
+        make_rule("172.23.0.0",  16, 23),
+        make_rule("192.168.1.0", 24, 101),
+    };
+    // Allocation required because initialized rules_local is on the stack
+    Rule *rules = malloc(16*sizeof(Rule));
+    memcpy(rules, rules_local, sizeof(rules_local));
+
+    TrieNode *root = calloc(1, sizeof(TrieNode));
+    root[0] = (TrieNode){.skip = 0, .branch = 1};
+
+    // * (s0 b1)
+    TrieNode *children = calloc(2, sizeof(TrieNode));
+    children[0] = (TrieNode){.skip = 3, .branch = 1}; // 0*
+    children[1] = (TrieNode){.skip = 0, .branch = 1}; // 1*
+    root[0].pointer = children;
+
+    // 0* (s3 b1)
+    TrieNode *children0 = calloc(2, sizeof(TrieNode));
+    children0[0] = (TrieNode){.skip = 0, .branch = 0, .pointer = &rules[1]};
+    children0[1] = (TrieNode){.skip = 8, .branch = 3}; // 0??? 1*
+    children[0].pointer = children0;
+
+    // 0??? 1* (s8 b3)
+    TrieNode *children01 = calloc(8, sizeof(TrieNode));
+    children01[0] = (TrieNode){.skip = 0, .branch = 0, .pointer = &rules[3]};
+    children01[1] = (TrieNode){.skip = 0, .branch = 0, .pointer = &rules[4]};
+    children01[2] = (TrieNode){.skip = 0, .branch = 0, .pointer = &rules[5]};
+    children01[3] = (TrieNode){.skip = 0, .branch = 0, .pointer = &rules[2]};
+    children01[4] = (TrieNode){.skip = 0, .branch = 0, .pointer = &rules[6]};
+    children01[5] = (TrieNode){.skip = 0, .branch = 0, .pointer = &rules[7]};
+    children01[6] = (TrieNode){.skip = 0, .branch = 0, .pointer = &rules[8]};
+    children01[7] = (TrieNode){.skip = 0, .branch = 0, .pointer = &rules[9]};
+    children0[1].pointer = children01;
+
+    // 1* (s0 b1)
+    TrieNode *children1 = calloc(2, sizeof(TrieNode));
+    children1[0] = (TrieNode){.skip = 12, .branch = 2}; // 10*
+    children1[1] = (TrieNode){.skip = 0, .branch = 0, .pointer = &rules[15]};
+    children[1].pointer = children1;
+
+    // 10* (s8 b2)
+    TrieNode *children10 = calloc(4, sizeof(TrieNode));
+    children10[0] = (TrieNode){.skip = 0, .branch = 0, .pointer = &rules[11]};
+    children10[1] = (TrieNode){.skip = 0, .branch = 0, .pointer = &rules[12]};
+    children10[2] = (TrieNode){.skip = 0, .branch = 0, .pointer = &rules[13]};
+    children10[3] = (TrieNode){.skip = 0, .branch = 0, .pointer = &rules[14]};
+    children1[0].pointer = children10;
 
     return root;
 }
