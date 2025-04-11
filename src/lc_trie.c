@@ -6,7 +6,7 @@
 // Macro for debug printing
 #ifdef DEBUG
 #include <stdio.h>
-#define DEBUG_PRINT(fmt, ...) fprintf(stderr, "[DEBUG] " fmt, ##__VA_ARGS__)
+#define DEBUG_PRINT(fmt, ...) printf("[DEBUG] " fmt, ##__VA_ARGS__)
 #else
 #define DEBUG_PRINT(...) do {} while (0)
 #endif
