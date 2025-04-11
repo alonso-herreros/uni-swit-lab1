@@ -455,8 +455,8 @@ uint32_t lookup_ip(ip_addr_t ip_addr, TrieNode *trie, int *access_count) {
         }
     }
 
-    /* DEBUG_PRINT("    %s\n", out_iface ? "Match" : "No match"); */
-    DEBUG_PRINT("--Done looking IP up: 0x%08X -> %d\n", ip_addr, out_iface);
+    DEBUG_PRINT("--Done looking IP 0x%08X up in %u accesses: -> %d\n",
+            ip_addr, *access_count, out_iface);
 
     return out_iface;
 }
