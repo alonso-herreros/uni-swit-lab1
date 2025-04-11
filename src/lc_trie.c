@@ -448,6 +448,7 @@ uint32_t lookup_ip(ip_addr_t ip_addr, TrieNode *trie, int *access_count) {
             match = match->parent;
             DEBUG_PRINT("    No match, checking parent (0x%08X/%hhu, at %p)\n",
                     match->prefix, match->prefix_len, match);
+            continue;
         } else {
             DEBUG_PRINT("    No match\n");
             break;
