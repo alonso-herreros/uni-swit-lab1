@@ -839,12 +839,12 @@ int eq_tries(const TrieNode *a, const TrieNode *b) {
  *
  * @return Pointer to the root of the constructed trie
  * * (s0 b2);
- * |-00* (s0 b0): 10.0.0.0/8 -> iface 2
- * |-01* (s0 b0): 0.0.0.0/0 -> iface 1
+ * |-00* (s0 b0): 10.0.0.0/8 -> iface 2;
+ * |-01* (s0 b0): 0.0.0.0/0 -> iface 1;
  * |-10* (s8 b1);
- * | |-10?? ???? ??0* (s0 b0): 172.16.0.0/12 -> iface 3
- * | \-10?? ???? ??1* (s0 b0): 172.32.0.0/11 -> iface 4
- * \-11* (s0 b0): 192.168.0.0/16 -> iface 1
+ * | |-10?? ???? ??0* (s0 b0): 172.16.0.0/12 -> iface 3;
+ * | \-10?? ???? ??1* (s0 b0): 172.32.0.0/11 -> iface 4;
+ * \-11* (s0 b0): 192.168.0.0/16 -> iface 1;
  */
 TrieNode *build_test_trie() {
 
