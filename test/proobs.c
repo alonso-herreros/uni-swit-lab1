@@ -30,6 +30,7 @@ void sprint_bits(char *dest, int value, int bits, int nibble_offset);
 void print_trie(const TrieNode *trie, char *tree_prefix, char *match_prefix,
         int pre_skip);
 
+int eq_tries(const TrieNode *a, const TrieNode *b);
 TrieNode *build_test_trie();
 
 
@@ -324,6 +325,36 @@ int _inspect_node(TrieNode *node, TrieNode *expected) {
     return 0;
 }
 
+// Wrapper function to test create_trie
+int _test_create_trie(Rule *rules, size_t num_rules, TrieNode *expected_root) {
+    printf("Input rules:\n");
+    print_rules(rules, num_rules);
+
+    TrieNode *trie = create_trie(rules, num_rules);
+    printf("Trie created:\n");
+    print_trie(trie, NULL, NULL, 0);
+
+    printf("Expected:\n");
+    print_trie(expected_root, NULL, NULL, 0);
+
+    if (!eq_tries(trie, expected_root)) {
+        free_trie(trie);
+        TEST_FAIL("Tries are not equal\n");
+    }
+
+    if (trie == NULL && expected_root != NULL) {
+        free_trie(trie);
+        TEST_FAIL("Trie creation failed\n");
+    } else if (expected_root == NULL && trie != NULL) {
+        free_trie(trie);
+        TEST_FAIL("Expected NULL trie, returned %p\n", trie);
+    }
+
+    free_trie(trie);
+
+    return 0;
+}
+
 // Test collection for create_trie
 int test_create_trie() {
     printf("\n=== Testing create_trie ===\n");
@@ -336,59 +367,43 @@ int test_create_trie() {
         make_rule("192.168.2.0", 24, 2),
         make_rule("192.168.3.0", 24, 3) // Default route
     };
+    size_t nrules1 = sizeof(rules1) / sizeof(rules1[0]);
 
-    printf("Input rules:\n");
-    print_rules(rules1, sizeof(rules1) / sizeof(rules1[0]));
-    // Sort rules (create_trie currently expects sorted rules)
-    Rule *sorted1 = sort_rules(rules1, sizeof(rules1) / sizeof(rules1[0]));
-    printf("\nSorted rules:\n");
-    print_rules(sorted1, 3);
+    // Manual construction of the expected trie
+    TrieNode *root = calloc(1, sizeof(TrieNode));
+    *root = (TrieNode){.skip = 22, .branch = 1};
 
-    TrieNode *trie = create_trie(sorted1, sizeof(rules1) / sizeof(rules1[0]));
-    printf("Trie created:\n");
-    print_trie(trie, NULL, NULL, 0);
-    if (trie == NULL) {
-        TEST_FAIL("Trie creation FAILED: returned NULL\n");
-    }
+    // * (s22 b1)
+    TrieNode *children = calloc(2, sizeof(TrieNode));
+    root->pointer = children;
+    children[0] = (TrieNode){.skip = 0, .branch = 0, .pointer = &rules1[0]};
+    children[1] = (TrieNode){.skip = 0, .branch = 1}; // ?{22} 1*
 
-    // Inspecting root
-    printf("\nInspecting root:\n");
-    TrieNode expected_root = {.branch=1, .skip=22, .pointer=NULL};
-    fails += _inspect_node(trie, &expected_root);
+    // ???? ???? ???? ???? ???? ??1* (s0 b1)
+    TrieNode *children1 = calloc(2, sizeof(TrieNode));
+    children[1].pointer = children1;
+    children1[0] = (TrieNode){.skip = 0, .branch = 0, .pointer = &rules1[1]};
+    children1[1] = (TrieNode){.skip = 0, .branch = 0, .pointer = &rules1[2]};
 
-    // Inspecting first child
-    printf("\nInspecting first child:\n");
-    TrieNode *child = trie->pointer;
-    TrieNode expected_child1 = {.skip=0, .branch=0, .pointer=&sorted1[0]};
-    fails += _inspect_node(child, &expected_child1);
-
-    // Inspecting second child
-    printf("\nInspecting second child:\n");
-    TrieNode *child2 = (TrieNode *) trie->pointer+1;
-    TrieNode expected_child2 = {.skip=0, .branch=1, .pointer=NULL};
-    fails += _inspect_node(child2, &expected_child2);
-
-    // Inspecting second child's children
-    printf("\nInspecting second child's children:\n");
-    TrieNode *child21 = (TrieNode *) child2->pointer;
-    TrieNode expected_child21 = {.skip=0, .branch=0, .pointer=&sorted1[1]};
-    fails += _inspect_node(child21, &expected_child21);
-    TrieNode *child22 = (TrieNode *) child2->pointer + 1;
-    TrieNode expected_child22 = {.skip=0, .branch=0, .pointer=&sorted1[2]};
-    fails += _inspect_node(child22, &expected_child22);
-
-    free(sorted1);
-    free_trie(trie);
+    fails += _test_create_trie(rules1, nrules1, root);
 
     // Test case 2
     printf("\n--- Test Case 2: Empty trie ---\n");
-    TrieNode *empty_trie = create_trie(NULL, 0);
-    print_trie(empty_trie, NULL, NULL, 0);
-    if (empty_trie != NULL) {
-        printf("! TEST FAIL ! Expected NULL Trie for empty rules\n");
-        free(empty_trie);
-        fails += 1;
-    }
+    fails += _test_create_trie(NULL, 0, NULL);
+
+    // Test case 3
+    printf("\n--- Test Case 3: Single rule ---\n");
+    Rule rules3[] = {
+        make_rule("0.0.0.0", 0, 1),
+    };
+    size_t nrules3 = sizeof(rules3) / sizeof(rules3[0]);
+
+    // Manual construction of the expected trie
+    TrieNode *root3 = calloc(1, sizeof(TrieNode));
+    *root3 = (TrieNode){.skip = 0, .branch = 0, .pointer = &rules3[0]};
+
+    fails += _test_create_trie(rules3, nrules3, root3);
+
 
     TEST_REPORT("create_trie", fails);
 
@@ -641,8 +656,30 @@ Rule make_rule(const char *ip, uint8_t len, int iface) {
     return r;
 }
 
-/**
- * Builds a test LC-Trie structure with sample routing entries
+// Helper function to compare two tries
+int eq_tries(const TrieNode *a, const TrieNode *b) {
+    if (a == NULL && b == NULL) return 1;
+    if (a == NULL || b == NULL) return 0;
+
+    if (a->skip != b->skip || a->branch != b->branch) {
+        return 0;
+    }
+
+    if (a->branch == 0) { // Implies b->branch == 0
+        return eq_rules((Rule *)a->pointer, (Rule *)b->pointer);
+    }
+
+    int max_children = 1 << a->branch;
+    for (int i = 0; i < max_children; i++) {
+        TrieNode *child_a = (TrieNode *)a->pointer + i;
+        TrieNode *child_b = (TrieNode *)b->pointer + i;
+        if (!eq_tries(child_a, child_b)) return 0;
+    }
+    return 1;
+}
+
+
+/** Builds a test LC-Trie structure with sample routing entries
  *
  * @note The trie does not have a 100% fill factor, that's why
  *      the default route is not at the root.
