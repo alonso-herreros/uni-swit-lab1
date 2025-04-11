@@ -54,9 +54,9 @@ TrieNode *create_subtrie(Rule *group, size_t group_size, uint8_t pre_skip,
         default_rule = new_default;
     }
 
-    // Edge case! All rules are actually the same but with different prefix lengths
+    // Edge case! All rules are single children
     if ( default_rule == &group[group_size - 1] ) {
-        DEBUG_PRINT("  Full skip encountered, forcing leaf node\n");
+        DEBUG_PRINT("  Single-child chain encountered, forcing leaf node\n");
         create_subtrie(default_rule, 1, 0, node_ptr, default_rule);
         return node_ptr;
     }
