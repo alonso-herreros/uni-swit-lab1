@@ -405,6 +405,31 @@ int test_create_trie() {
 
     fails += _test_create_trie(rules3, nrules3, root3);
 
+    // Test case 4
+    printf("\n--- Test Case 4: Complex trie ---\n");
+    Rule rules[] = { // Same rules as in build_test_trie2
+        make_rule("0.0.0.0",     0,  1),   // Default route
+        make_rule("0.1.0.0",     16, 2),
+        make_rule("10.0.0.0",    8,  3),
+        make_rule("10.0.0.0",    16, 10),
+        make_rule("10.1.0.0",    16, 11),
+        make_rule("10.2.0.0",    16, 12),
+        make_rule("10.4.0.0",    16, 14),
+        make_rule("10.5.0.0",    16, 15),
+        make_rule("10.6.0.0",    16, 16),
+        make_rule("10.7.0.0",    16, 17),
+        make_rule("172.16.0.0",  12, 5),
+        make_rule("172.20.0.0",  16, 20),
+        make_rule("172.21.0.0",  16, 21),
+        make_rule("172.22.0.0",  16, 22),
+        make_rule("172.23.0.0",  16, 23),
+        make_rule("192.168.1.0", 24, 101),
+    };
+    size_t nrules = sizeof(rules) / sizeof(rules[0]);
+
+    root3 = build_test_trie2();
+    fails += _test_create_trie(rules, nrules, root3);
+    free(root3);
 
     TEST_REPORT("create_trie", fails);
 
