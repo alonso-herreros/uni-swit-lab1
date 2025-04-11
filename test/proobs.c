@@ -449,6 +449,12 @@ int test_create_trie() {
     fails += _test_create_trie(rules, nrules4, root4);
     free(root4);
 
+    if (FILL_FACTOR > 0.875) {
+        printf("^!! WARNING: test required FILL_FACTOR > 0.875, but it's %f\n"
+               "    Try compiling with -DFILL_FACTOR=0.875 or lower\n",
+                1.0*FILL_FACTOR);
+    }
+
     TEST_REPORT("create_trie", fails);
 
     return fails;
