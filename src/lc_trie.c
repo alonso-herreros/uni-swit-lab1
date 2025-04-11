@@ -235,12 +235,18 @@ int compare_rules(const void *a, const void *b) {
  *  input.
  */
 Rule *sort_rules(Rule *rules, size_t num_rules) {
+    DEBUG_PRINT("Sorting rules at %p\n", rules);
     Rule *sorted = malloc(num_rules * sizeof(Rule));
-    if (!sorted)
+    if (!sorted || !rules) {
+        DEBUG_PRINT("--Error: rules empty or couldn't malloc copy\n");
         return NULL;
+    }
 
+    DEBUG_PRINT("  Copying rules to new memory space\n");
     memcpy(sorted, rules, num_rules * sizeof(Rule));
+    DEBUG_PRINT("  Sorting with qsort\n");
     qsort(sorted, num_rules, sizeof(Rule), compare_rules);
+    DEBUG_PRINT("--Sorted\n");
 
     return sorted;
 }
