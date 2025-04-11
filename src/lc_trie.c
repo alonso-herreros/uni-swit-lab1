@@ -277,10 +277,10 @@ Rule *compute_default(const Rule *group, size_t group_size, uint8_t pre_skip) {
         // Since rules should be ordered, if the last rule is encompassed by
         // the current one, all rules in between are as well
         if (rule_match(&group[i], last_rule.prefix)) {
-            DEBUG_PRINT("    Match. This is a default for the rest.\n", i);
+            DEBUG_PRINT("    Match. This is a default for the rest.\n");
             default_rule = (Rule *)&group[i];
         } else {
-            DEBUG_PRINT("    No match.\n", i);
+            DEBUG_PRINT("    No match.\n");
             break;
         }
     }
@@ -332,6 +332,41 @@ TrieNode *create_trie(Rule *rules, size_t num_rules) {
 
     DEBUG_PRINT("--Done creating trie at %p\n", root);
     return root;
+}
+
+// ---- Count nodes ----
+
+uint32_t count_nodes_trie(TrieNode *trie) {
+    DEBUG_PRINT("Counting nodes in trie at %p\n", trie);
+    if (trie == NULL) {
+        DEBUG_PRINT("--Trie doesn't exist. 0 nodes.\n");
+        return 0;
+    }
+
+    // Si es un nodo hoja (no tiene hijos, apunta a una Rule)
+    if (trie->branch == 0) {
+        DEBUG_PRINT("--Leaf node, there is 1 node\n");
+        return 1;
+    }
+
+    DEBUG_PRINT("  Intermediate node with branch=%u\n", trie->branch);
+
+    // Si es un nodo interno (tiene hijos)
+    uint32_t count = 1; // Contamos este nodo
+    TrieNode *children = (TrieNode *)trie->pointer; //Pointer to the first child
+
+    // Calculamos cuántos hijos tiene este nodo: 2^branch
+    uint32_t num_children = 1 << trie->branch;
+    DEBUG_PRINT("  Counting 1 and RECURSING for %u children at %p\n",
+            num_children, children);
+
+    for (uint32_t i = 0; i < num_children; i++) {
+        count += count_nodes_trie(&children[i]);
+    }
+
+    DEBUG_PRINT("--Done counting, there are %u nodes under trie at %p\n",
+            count, trie);
+    return count;
 }
 
 // ---- Address lookup ----
@@ -430,3 +465,5 @@ uint32_t count_nodes_trie(TrieNode *trie) {
     return 42;  // Indeed
 }
 #endif // MOCK
+
+

@@ -4,6 +4,11 @@
 #include <stdbool.h>
 #include <string.h>
 
+#include "../src/lc_trie.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdbool.h>
+
 // ==== Macros ====
 #define TEST_FAIL(format, ...) \
     do { \
@@ -24,6 +29,8 @@ Rule make_rule(const char *ip, uint8_t len, int iface);
 void print_rules(const Rule *rules, size_t count);
 void print_rule(const Rule *rule);
 int eq_rules(const Rule *a, const Rule *b);
+TrieNode *create_leaf(uint32_t prefix, uint8_t len, uint32_t iface);
+TrieNode *create_internal(uint8_t branch, uint8_t skip, TrieNode **children);
 
 void print_node(const TrieNode *node);
 int eq_nodes(const TrieNode *a, const TrieNode *b);
@@ -461,6 +468,59 @@ int test_create_trie() {
 }
 
 
+// Wrapper function for testing count_nodes_trie
+int _test_count_nodes(TrieNode *trie, uint32_t expected) {
+    printf("Counting nodes for trie:\n");
+    print_trie(trie, NULL, NULL, 0);
+    uint32_t count = count_nodes_trie(trie);
+    printf("Counted nodes: %u (expected: %u)\n", count, expected);
+    if (count != expected) {
+        TEST_FAIL("Expected node count %u, got %u\n", expected, count);
+    }
+    return 0;
+}
+
+// Test function for count_nodes_trie
+int test_count_nodes() {
+    printf("\n=== Testing count_nodes_trie ===\n");
+    int fails = 0;
+
+    // printf("\n--- Test Case 1: Manually built trie ---\n");
+    // // Creamos un pequeño trie manualmente
+    // TrieNode *leaf1 = create_leaf(0x64400000, 10, 1);  // 100.64.0.0/10
+    // TrieNode *leaf2 = create_leaf(0x64800000, 9, 2);   // 100.128.0.0/9
+    // TrieNode *leaf3 = create_leaf(0x64000000, 8, 3);   // 100.0.0.0/8
+    // TrieNode *leaf5 = create_leaf(0xC0000000, 8, 4);   // 192.0.0.0/8
+
+    // TrieNode *children2[2] = {leaf2, leaf3};
+    // TrieNode *internal2 = create_internal(1, 2, children2);
+
+    // TrieNode *children1[2] = {leaf1, internal2};
+    // TrieNode *internal1 = create_internal(1, 4, children1);
+
+    // TrieNode *root_children[2] = {internal1, leaf5};
+    // TrieNode *root = create_internal(1, 0, root_children);
+
+    // // Test the case
+    // fails += _test_count_nodes(root, 7);
+    // free(root);
+
+    // Test case 2
+    printf("\n--- Test Case 2: test_build_trie ---\n");
+    TrieNode *trie2 = build_test_trie();
+    fails += _test_count_nodes(trie2, 7);
+
+    // Test case 3
+    printf("\n--- Test Case 3: test_build_trie2 ---\n");
+    TrieNode *trie3 = build_test_trie2();
+    fails += _test_count_nodes(trie3, 19);
+
+    TEST_REPORT("count_nodes_trie", fails);
+
+    return fails;
+}
+
+
 // Test wrapper for lookup
 int _test_lookup(ip_addr_t ip, TrieNode *trie, int expected) {
     int access_count = 0;
@@ -779,12 +839,12 @@ int eq_tries(const TrieNode *a, const TrieNode *b) {
  *
  * @return Pointer to the root of the constructed trie
  * * (s0 b2);
- * |-00* (s0 b0): 10.0.0.0/8 -> iface 2
- * |-01* (s0 b0): 0.0.0.0/0 -> iface 1
+ * |-00* (s0 b0): 10.0.0.0/8 -> iface 2;
+ * |-01* (s0 b0): 0.0.0.0/0 -> iface 1;
  * |-10* (s8 b1);
- * | |-10?? ???? ??0* (s0 b0): 172.16.0.0/12 -> iface 3
- * | \-10?? ???? ??1* (s0 b0): 172.32.0.0/11 -> iface 4
- * \-11* (s0 b0): 192.168.0.0/16 -> iface 1
+ * | |-10?? ???? ??0* (s0 b0): 172.16.0.0/12 -> iface 3;
+ * | \-10?? ???? ??1* (s0 b0): 172.32.0.0/11 -> iface 4;
+ * \-11* (s0 b0): 192.168.0.0/16 -> iface 1;
  */
 TrieNode *build_test_trie() {
 
@@ -915,6 +975,41 @@ TrieNode *build_test_trie2() {
     return root;
 }
 
+// Funciones auxiliares (para crear nodos)
+TrieNode *create_leaf(uint32_t prefix, uint8_t len, uint32_t iface)
+{
+    Rule *rule = malloc(sizeof(Rule));
+    rule->prefix = prefix;
+    rule->prefix_len = len;
+    rule->out_iface = iface;
+
+    TrieNode *leaf = malloc(sizeof(TrieNode));
+    leaf->branch = 0;
+    leaf->skip = 0;
+    leaf->pointer = rule;
+    return leaf;
+}
+
+TrieNode *create_internal(uint8_t branch, uint8_t skip, TrieNode **children)
+{
+    TrieNode *node = malloc(sizeof(TrieNode));
+    node->branch = branch;
+    node->skip = skip;
+
+    // Cantidad de hijos esperados
+    uint32_t n = 1 << branch;
+
+    // Asignamos el array de punteros a hijos
+    TrieNode **child_array = malloc(n * sizeof(TrieNode *));
+    for (uint32_t i = 0; i < n; i++)
+    {
+        child_array[i] = children[i]; // apuntamos directamente, no copiamos
+    }
+
+    node->pointer = child_array;
+    return node;
+}
+
 // ==== Main flow ====
 
 // Run all tests
@@ -929,9 +1024,12 @@ int main() {
     fails += test_compute_default();
     fails += test_rule_match();
     fails += test_create_trie();
+    fails += test_count_nodes();
     fails += test_lookup();
 
     TEST_REPORT("ALL", fails);
 
     return fails;
 }
+
+
