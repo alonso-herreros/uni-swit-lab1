@@ -232,40 +232,56 @@ int test_compute_default() {
     int fails = 0;
 
     // Test case 1
-    printf("\n--- Test Case 1 (With default route) ---\n");
+    printf("\n--- Test Case 1 (All-encompassing default) ---\n");
     Rule rules1[] = {
         make_rule("0.0.0.0", 0, 1), // Default route
+        make_rule("192.168.0.0", 24, 3),
         make_rule("192.168.1.0", 24, 2),
-        make_rule("192.168.0.0", 16, 3)
     };
-
     fails += _test_compute_default(rules1, 3, 0, &(rules1[0]));
 
     // Test case 2
-    printf("\n--- Test Case 2 (No default route) ---\n");
+    printf("\n--- Test Case 2 (Same IP, different length) ---\n");
     Rule rules2[] = {
-        make_rule("192.168.1.0", 24, 1),
-        make_rule("192.168.0.0", 16, 2)};
-
-    fails += _test_compute_default(rules2, 2, 0, NULL);
+        make_rule("192.168.0.0", 16, 2),
+        make_rule("192.168.0.0", 24, 1),
+    };
+    fails += _test_compute_default(rules2, 2, 0, &(rules2[1]));
 
     // Test case 3
-    printf("\n--- Test Case 3 (Default at end) ---\n");
+    printf("\n--- Test Case 3 (Linear group) ---\n");
     Rule rules3[] = {
-        make_rule("192.168.1.0", 24, 1),
         make_rule("192.168.0.0", 16, 2),
-        make_rule("0.0.0.0", 0, 3) // Default route at end
+        make_rule("192.168.128.0", 20, 1),
+        make_rule("192.168.129.0", 24, 1),
     };
-
     fails += _test_compute_default(rules3, 3, 0, &(rules3[2]));
+
+    // Test case 4
+    printf("\n--- Test Case 4 (Inner default) ---\n");
+    Rule rules4[] = {
+        make_rule("0.0.0.0", 0, 3),
+        make_rule("192.168.0.0", 16, 2),
+        make_rule("192.168.0.0", 24, 1),
+        make_rule("192.168.1.0", 24, 1),
+    };
+    fails += _test_compute_default(rules4, 4, 0, &(rules4[1]));
+
+    // Test case 5
+    printf("\n--- Test Case 5 (No default) ---\n");
+    Rule rules5[] = {
+        make_rule("192.168.0.0", 24, 1),
+        make_rule("192.168.1.0", 24, 1),
+    };
+    fails += _test_compute_default(rules5, 2, 0, NULL);
 
     TEST_REPORT("compute_default", fails);
 
     return fails;
 }
 
-// Wrapper function for prefix_match
-int _test_prefix_match(Rule *rule, const char *ip_str, bool expected) {
+// Wrapper function for rule_match
+int _test_rule_match(Rule *rule, const char *ip_str, bool expected) {
     printf("Testing '%s' against rule: ", ip_str);
     print_rule(rule);
 
@@ -274,7 +290,7 @@ int _test_prefix_match(Rule *rule, const char *ip_str, bool expected) {
     sscanf(ip_str, "%u.%u.%u.%u", &a, &b, &c, &d);
     ip = (a << 24) | (b << 16) | (c << 8) | d;
 
-    bool match = prefix_match(rule, ip);
+    bool match = rule_match(rule, ip);
     printf("Match: %s (expected: %s)\n",
         match ? "true" : "false",
         expected ? "true" : "false");
@@ -286,9 +302,9 @@ int _test_prefix_match(Rule *rule, const char *ip_str, bool expected) {
     return 0;
 }
 
-// Test collection for prefix_match
-int test_prefix_match() {
-    printf("\n=== Testing prefix_match ===\n");
+// Test collection for rule_match
+int test_rule_match() {
+    printf("\n=== Testing rule_match ===\n");
     int fails = 0;
 
     Rule rule = make_rule("192.168.1.0", 24, 1);
@@ -305,10 +321,10 @@ int test_prefix_match() {
 
     for (size_t i = 0; i < 5; i++) {
         printf("\n--- Test Case %zu ---\n", i + 1);
-        fails += _test_prefix_match(&rule, cases[i].ip, cases[i].expected);
+        fails += _test_rule_match(&rule, cases[i].ip, cases[i].expected);
     }
 
-    TEST_REPORT("prefix_match", fails);
+    TEST_REPORT("rule_match", fails);
 
     return fails;
 }
@@ -427,11 +443,11 @@ int test_create_trie() {
         make_rule("172.23.0.0",  16, 23),
         make_rule("192.168.1.0", 24, 101),
     };
-    size_t nrules = sizeof(rules) / sizeof(rules[0]);
+    size_t nrules4 = sizeof(rules) / sizeof(rules[0]);
 
-    root3 = build_test_trie2();
-    fails += _test_create_trie(rules, nrules, root3);
-    free(root3);
+    TrieNode *root4 = build_test_trie2();
+    fails += _test_create_trie(rules, nrules4, root4);
+    free(root4);
 
     TEST_REPORT("create_trie", fails);
 
@@ -608,6 +624,9 @@ void print_rules(const Rule *rules, size_t count) {
 }
 
 int eq_rules(const Rule *a, const Rule *b) {
+    if (a == NULL || b == NULL) {
+        return 0;
+    }
     return (a->prefix == b->prefix &&
             a->prefix_len == b->prefix_len &&
             a->out_iface == b->out_iface);
@@ -902,7 +921,7 @@ int main() {
     fails += test_compute_branch();
     fails += test_sort_rules();
     fails += test_compute_default();
-    fails += test_prefix_match();
+    fails += test_rule_match();
     fails += test_create_trie();
     fails += test_lookup();
 
