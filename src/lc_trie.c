@@ -285,6 +285,8 @@ Rule *compute_default(const Rule *group, size_t group_size, uint8_t pre_skip) {
         if (rule_match(&group[i], last_rule.prefix)) {
             DEBUG_PRINT("    Match. This is a default for the rest.\n");
             default_rule = (Rule *)&group[i];
+            DEBUG_PRINT("    Setting parent for all subsequent rules\n");
+            set_parents((Rule *)&group[i+1], group_size - i - 1, default_rule);
         } else {
             DEBUG_PRINT("    No match.\n");
             break;
@@ -293,6 +295,25 @@ Rule *compute_default(const Rule *group, size_t group_size, uint8_t pre_skip) {
 
     DEBUG_PRINT("--Done computing default: %p\n", default_rule);
     return default_rule;
+}
+
+int set_parents(Rule *group, size_t group_size, Rule *default_rule) {
+    DEBUG_PRINT("Setting parents for %zu rules at %p\n", group_size, group);
+    if (group_size == 0) {
+        DEBUG_PRINT("--Group is empty, returning null");
+        return -1;
+    }
+
+    for (size_t i = 0; i < group_size; i++) {
+        if (group[i].parent == NULL) {
+            group[i].parent = default_rule;
+            DEBUG_PRINT("  Rule %zu at %p parent set to %p\n",
+                    i, &group[i], default_rule);
+        }
+    }
+
+    DEBUG_PRINT("--Done setting parents\n");
+    return 0;
 }
 
 /** Check if an IP address matches a given rule.

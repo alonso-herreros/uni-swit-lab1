@@ -123,6 +123,8 @@ uint8_t compute_skip(const Rule *group, size_t group_size, uint8_t pre_skip);
 
 Rule *compute_default(const Rule *group, size_t group_size, uint8_t pre_skip);
 
+int set_parents(Rule *group, size_t group_size, Rule *default_rule);
+
 bool rule_match(const Rule *rule, ip_addr_t address);
 bool prefix_match(ip_addr_t ip1, ip_addr_t ip2, uint8_t len);
 
