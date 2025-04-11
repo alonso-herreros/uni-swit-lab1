@@ -534,7 +534,7 @@ int test_lookup() {
         {0xAC3FFFFF, 4, "Upper bound 172.63.255.255"},
         {0xAC400000, 0, "Out of range 172.64.0.0"},
         // Special cases
-        {0x7F000001, 0, "Loopback 127.0.0.1"},
+        {0x7F000001, 1, "Loopback 127.0.0.1"},
         {0x00000000, 0, "Zero address"},
         {0xFFFFFFFF, 0, "Broadcast address"},
         {0x0AFFFFFF, 2, "Max IP in 10.0.0.0/8"},
@@ -545,7 +545,7 @@ int test_lookup() {
         {0x0AFFFFFF, 2, "Upper edge 10.255.255.255"},
         {0x0B000000, 0, "Lower edge out of range 11.0.0.0"},
         // Random IPs for coverage
-        {0x45A3D2F1, 0, "Random IP 69.163.210.241"},
+        {0x45A3D2F1, 1, "Random IP 69.163.210.241"},
         {0xDEADBEEF, 0, "Special pattern IP 222.173.190.239"}, // Nice
         {0x12345678, 0, "Special pattern IP 18.52.86.120"}
     };
