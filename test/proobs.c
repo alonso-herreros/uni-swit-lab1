@@ -468,10 +468,22 @@ int test_create_trie() {
 }
 
 
+// Wrapper function for testing count_nodes_trie
+int _test_count_nodes(TrieNode *trie, uint32_t expected) {
+    uint32_t count = count_nodes_trie(trie);
+    printf("Counted nodes: %u (expected: %u)\n", count, expected);
+    if (count != expected) {
+        TEST_FAIL("Expected node count %u, got %u\n", expected, count);
+    }
+    return 0;
+}
+
 // Test function for count_nodes_trie
 int test_count_nodes() {
     printf("\n=== Testing count_nodes_trie ===\n");
+    int fails = 0;
 
+    printf("\n--- Test Case 1: Manually built trie ---\n");
     // Creamos un pequeño trie manualmente
     TrieNode *leaf1 = create_leaf(0x64400000, 10, 1);  // 100.64.0.0/10
     TrieNode *leaf2 = create_leaf(0x64800000, 9, 2);   // 100.128.0.0/9
@@ -487,18 +499,11 @@ int test_count_nodes() {
     TrieNode *root_children[2] = {internal1, leaf5};
     TrieNode *root = create_internal(1, 0, root_children);
 
-    // Contar nodos
-    uint32_t count = count_nodes_trie(root);
-    printf("Total nodes: %u (expected: 7)\n", count);
-
-    int fails = 0;
-    if (count != 7) {
-        TEST_FAIL("Expected node count 7, got %u\n", count);
-        fails++;
-    }
-
+    // Test the case
+    fails += _test_count_nodes(root, 7);
     free(root);
     TEST_REPORT("count_nodes_trie", fails);
+
     return fails;
 }
 
