@@ -931,6 +931,24 @@ TrieNode *build_test_trie2() {
     Rule *rules = malloc(16*sizeof(Rule));
     memcpy(rules, rules_local, sizeof(rules_local));
 
+    // Setting rule hierarchy
+    rules[1].parent = &rules[0];
+    rules[2].parent = &rules[0];
+    rules[3].parent = &rules[2];
+    rules[4].parent = &rules[2];
+    rules[5].parent = &rules[2];
+    rules[6].parent = &rules[2];
+    rules[7].parent = &rules[2];
+    rules[8].parent = &rules[2];
+    rules[9].parent = &rules[2];
+    rules[10].parent = &rules[0];
+    rules[11].parent = &rules[10];
+    rules[12].parent = &rules[10];
+    rules[13].parent = &rules[10];
+    rules[14].parent = &rules[10];
+    rules[15].parent = &rules[0];
+
+
     TrieNode *root = calloc(1, sizeof(TrieNode));
     root[0] = (TrieNode){.skip = 0, .branch = 1};
 
