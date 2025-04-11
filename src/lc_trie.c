@@ -266,11 +266,20 @@ Rule *compute_default(const Rule *group, size_t group_size, uint8_t pre_skip) {
     }
 
     Rule *default_rule = NULL;
+    Rule last_rule = group[group_size - 1];
 
-    for (size_t i = 0; i < group_size; i++) {
-        // No trace because this shouldn't be happening
-        if (group[i].prefix_len <= pre_skip) {
+    DEBUG_PRINT("  Last rule at %p: 0x%08X/%hhu\n",
+            &last_rule, last_rule.prefix, last_rule.prefix_len);
+    for (uint8_t i = 0; i < group_size; i++) {
+        DEBUG_PRINT("  Checking rule %hhu: 0x%08X/%hhu\n",
+                i, group[i].prefix, group[i].prefix_len);
+        // Since rules should be ordered, if the last rule is encompassed by
+        // the current one, all rules in between are as well
+        if (rule_match(&group[i], last_rule.prefix)) {
+            DEBUG_PRINT("    Match. This is a default for the rest.\n", i);
             default_rule = (Rule *)&group[i];
+        } else {
+            DEBUG_PRINT("    No match.\n", i);
             break;
         }
     }
