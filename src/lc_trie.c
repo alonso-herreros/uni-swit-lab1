@@ -38,20 +38,27 @@ TrieNode *create_subtrie(Rule *group, size_t group_size, uint8_t pre_skip,
     }
 
     DEBUG_PRINT("Creating subtrie with %zu rules at %p\n", group_size, group);
-    DEBUG_PRINT("  Pre-skip is %zu, default is %p\n", pre_skip, default_rule);
+    DEBUG_PRINT("  Pre-skip is %hhu, default is %p\n", pre_skip, default_rule);
 
     // Compute skip and branch values
     uint8_t skip = compute_skip(group, group_size, pre_skip);
     uint8_t branch = compute_branch(group, group_size, pre_skip + skip);
-    DEBUG_PRINT("  skip = %zu, branch = %zu\n", skip, branch);
+    DEBUG_PRINT("  skip = %hhu, branch = %hhu\n", skip, branch);
 
     // Update default_rule if a suitable one is found
     Rule *new_default = compute_default(group, group_size, pre_skip);
     if (new_default) {
         DEBUG_PRINT("  Updating default, now at %p:\n", new_default);
-        DEBUG_PRINT("    0x%08X/%zu -> %d\n", new_default->prefix,
+        DEBUG_PRINT("    0x%08X/%hhu -> %d\n", new_default->prefix,
                 new_default->prefix_len, new_default->out_iface);
         default_rule = new_default;
+    }
+
+    // Edge case! All rules are actually the same but with different prefix lengths
+    if ( pre_skip + skip >= IP_ADDRESS_LENGTH ) {
+        DEBUG_PRINT("  Full skip encountered, forcing leaf node\n");
+        create_subtrie(default_rule, 1, 0, node_ptr, default_rule);
+        return node_ptr;
     }
 
     // Allocate memory for child nodes
@@ -118,7 +125,8 @@ TrieNode *create_subtrie(Rule *group, size_t group_size, uint8_t pre_skip,
  *      skipped. The absolute maximum value is 32.
  */
 uint8_t compute_skip(const Rule *group, size_t group_size, uint8_t pre_skip) {
-    DEBUG_PRINT("Computing skip for %zu rules at %p\n", group_size, group);
+    DEBUG_PRINT("Computing skip for %zu rules at %p with pre-skip %hhu\n",
+            group_size, group, pre_skip);
     if (group_size == 0){
         DEBUG_PRINT("--Group is empty. Skip is 0.\n");
         return 0;
@@ -128,26 +136,17 @@ uint8_t compute_skip(const Rule *group, size_t group_size, uint8_t pre_skip) {
         return group[0].prefix_len - pre_skip;
     }
 
-    uint32_t mask;
-    uint8_t min_len = (group[0].prefix_len < group[group_size - 1].prefix_len) ? group[0].prefix_len : group[group_size - 1].prefix_len;
-    DEBUG_PRINT("  Smallest prefix length is %zu\n", min_len);
-
-    getNetmask(min_len, (int *) &mask);
-    DEBUG_PRINT("  Group netmask is 0x%X\n", mask);
-
-    ip_addr_t first = group[0].prefix & mask;
-    ip_addr_t last = group[group_size - 1].prefix & mask;
+    ip_addr_t first = group[0].prefix;
+    ip_addr_t last = group[group_size - 1].prefix;
     DEBUG_PRINT("  First IP: 0x%08X; Last IP: 0x%08X\n", first, last);
 
     uint8_t skip = pre_skip;
-    while (skip < min_len) {
-        uint32_t mask_bit = 1 << (31 - skip);
-        if ((first & mask_bit) != (last & mask_bit))
-            break;
+    while (skip <= IP_ADDRESS_LENGTH && prefix_match(first, last, skip)) {
         skip++;
-    }
+    } // At this point, skip is one too big
+    skip--;
 
-    DEBUG_PRINT("--Done computing skip: %zu\n", skip - pre_skip);
+    DEBUG_PRINT("--Done computing skip: %hhu\n", skip - pre_skip);
     return skip - pre_skip;
 }
 
@@ -162,20 +161,20 @@ uint8_t compute_skip(const Rule *group, size_t group_size, uint8_t pre_skip) {
  *  @return the branching factor. The absolute maximum value is 32.
  */
 uint8_t compute_branch(const Rule *group, size_t group_size, uint8_t pre_skip) {
-    DEBUG_PRINT("Computing branch for %zu rules at %p\n", group_size, group);
+    DEBUG_PRINT("Computing branch for %zu rules at %p with pre-skip %hhu\n",
+            group_size, group, pre_skip);
     if (group_size <= 1) {
         DEBUG_PRINT("--Group too small. Branch is 0.");
         return 0;
     }
 
     uint8_t branch = 1;
-    DEBUG_PRINT("  Pre-skip is %zu\n", pre_skip);
 
     while (1) {
         const uint16_t max_branch_prefixes = 1 << branch; //2^branch
         uint16_t unique_branch_prefixes = 1; //Start with 1 (group isn't empty)
         uint32_t last_branch_prefix = extract_msb(group[0].prefix, pre_skip, branch);
-        DEBUG_PRINT("  Trying branch=%zu: %zu prefixes available\n", branch,
+        DEBUG_PRINT("  Trying branch=%hhu: %hu prefixes available\n", branch,
                 max_branch_prefixes);
 
         //Count unique branch prefixes at this branch level
@@ -194,13 +193,13 @@ uint8_t compute_branch(const Rule *group, size_t group_size, uint8_t pre_skip) {
 
         //Return when fill factor condition is no longer met
         if ((float)unique_branch_prefixes / max_branch_prefixes < FILL_FACTOR) {
-            DEBUG_PRINT("--Done computing branch: %zu\n", branch-1);
+            DEBUG_PRINT("--Done computing branch: %hhu\n", branch-1);
             return branch - 1; // This branch is too large
         }
 
         branch++;
     }
-    DEBUG_PRINT("--Abnormal end of compute_branch: %zu\n", branch-1);
+    DEBUG_PRINT("--Abnormal end of compute_branch: %hhu\n", branch-1);
     return branch;
 }
 
@@ -287,11 +286,24 @@ Rule *compute_default(const Rule *group, size_t group_size, uint8_t pre_skip) {
  *
  *  @return true if the address matches the rule, false otherwise
  */
-bool prefix_match(const Rule *rule, ip_addr_t address) {
-    // Masking the shift distance with 31 ensures we don't try to shift by more
-    // than 31 bits, which would be undefined behavior.
-    uint32_t mask = 0xFFFFFFFF << ((32 - rule->prefix_len) & 31);
-    return (address & mask) == (rule->prefix & mask);
+inline bool rule_match(const Rule *rule, ip_addr_t address) {
+    return prefix_match(rule->prefix, address, rule->prefix_len);
+}
+
+/** Check if two IP addresses share a length of prefix.
+ *
+ *  @param ip1 the first IP address for comparison
+ *  @param ip2 the second IP address for comparison
+ *  @param len the length of the prefix to check
+ *
+ *  @return true if the addresses share the prefix, false otherwise
+ */
+inline bool prefix_match(ip_addr_t ip1, ip_addr_t ip2, uint8_t len) {
+    if (len == 0)
+        return true; // Empty prefix matches everything
+
+    uint32_t mask = 0xFFFFFFFF << (32 - len);
+    return (ip1 & mask) == (ip2 & mask);
 }
 
 // ---- Trie initialization ----
@@ -354,7 +366,7 @@ uint32_t lookup_ip(ip_addr_t ip_addr, TrieNode *trie, int *access_count) {
     DEBUG_PRINT("  Checking against 0x%08X/%hhu (rule at %p)\n",
             match->prefix, match->prefix_len, match);
 
-    uint32_t out_iface = prefix_match(match, ip_addr) ? match->out_iface : 0;
+    uint32_t out_iface = rule_match(match, ip_addr) ? match->out_iface : 0;
 
     DEBUG_PRINT("    %s\n", out_iface ? "Match" : "No match");
     DEBUG_PRINT("--Done looking IP up: 0x%08X -> %d\n", ip_addr, out_iface);
@@ -394,7 +406,7 @@ void free_trie(TrieNode *root) {
 
     DEBUG_PRINT("  Freeing root\n");
     free(root);
-    DEBUG_PRINT("--Done freeing tree at %p\n", root);
+    DEBUG_PRINT("--Done freeing tree\n");
 }
 
 // ---- Mock implementations for testing ----
