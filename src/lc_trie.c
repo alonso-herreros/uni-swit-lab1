@@ -262,7 +262,7 @@ Rule *sort_rules(Rule *rules, size_t num_rules) {
 Rule *compute_default(const Rule *group, size_t group_size, uint8_t pre_skip) {
     DEBUG_PRINT("Computing default for %zu rules at %p\n", group_size, group);
     if (group_size == 0) {
-        DEBUG_PRINT("--Group is empty, returning null");
+        DEBUG_PRINT("--Group is empty, returning null\n");
         return NULL;
     }
 
