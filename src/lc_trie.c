@@ -132,6 +132,11 @@ uint8_t compute_skip(const Rule *group, size_t group_size, uint8_t pre_skip) {
         DEBUG_PRINT("--Group is empty. Skip is 0.\n");
         return 0;
     }
+
+    uint8_t min_len = (group[0].prefix_len < group[group_size-1].prefix_len) ?
+        group[0].prefix_len : group[group_size - 1].prefix_len;
+    DEBUG_PRINT("  Smallest prefix length is %zu\n", min_len);
+
     if (group_size == 1) {
         DEBUG_PRINT("--Group has 1 member. Skip is prefix_len - pre_skip.\n");
         return group[0].prefix_len - pre_skip;
@@ -142,7 +147,7 @@ uint8_t compute_skip(const Rule *group, size_t group_size, uint8_t pre_skip) {
     DEBUG_PRINT("  First IP: 0x%08X; Last IP: 0x%08X\n", first, last);
 
     uint8_t skip = pre_skip;
-    while (skip <= IP_ADDRESS_LENGTH && prefix_match(first, last, skip)) {
+    while (skip <= min_len && prefix_match(first, last, skip)) {
         skip++;
     } // At this point, skip is one too big
     skip--;
