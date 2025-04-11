@@ -470,6 +470,8 @@ int test_create_trie() {
 
 // Wrapper function for testing count_nodes_trie
 int _test_count_nodes(TrieNode *trie, uint32_t expected) {
+    printf("Counting nodes for trie:\n");
+    print_trie(trie, NULL, NULL, 0);
     uint32_t count = count_nodes_trie(trie);
     printf("Counted nodes: %u (expected: %u)\n", count, expected);
     if (count != expected) {
