@@ -6,9 +6,8 @@
 #include <stdbool.h> // For the bool type
 
 // ==== Constants ====
-#ifndef FILL_FACTOR
-#define FILL_FACTOR 1 // Determines how densely populated branches must be
-
+#ifndef FILL_FACTOR     // Can be overridden at compile time
+#define FILL_FACTOR 1.0 // Determines how densely populated branches must be
 #endif
 
 // ==== Data Types ====

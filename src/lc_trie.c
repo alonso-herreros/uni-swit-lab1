@@ -163,6 +163,7 @@ uint8_t compute_skip(const Rule *group, size_t group_size, uint8_t pre_skip) {
 uint8_t compute_branch(const Rule *group, size_t group_size, uint8_t pre_skip) {
     DEBUG_PRINT("Computing branch for %zu rules at %p with pre-skip %hhu\n",
             group_size, group, pre_skip);
+    DEBUG_PRINT("  FILL_FACTOR is %f\n", FILL_FACTOR);
     if (group_size <= 1) {
         DEBUG_PRINT("--Group too small. Branch is 0.");
         return 0;
