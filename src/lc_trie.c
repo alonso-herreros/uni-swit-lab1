@@ -53,6 +53,13 @@ TrieNode *create_subtrie(Rule *group, size_t group_size, uint8_t pre_skip,
         size_t default_count = (size_t)(new_default - group) / sizeof(Rule) + 1;
         group_size -= default_count;
         group = new_default + 1;
+
+        // Edge case! All rules are single children
+        if ( default_rule == &group[group_size - 1] ) {
+            DEBUG_PRINT("  Single-child chain encountered, forcing leaf node\n");
+            create_subtrie(default_rule, 1, 0, node_ptr, default_rule);
+            return node_ptr;
+        }
     }
 
     // Compute skip and branch values
@@ -60,13 +67,6 @@ TrieNode *create_subtrie(Rule *group, size_t group_size, uint8_t pre_skip,
     uint8_t branch = compute_branch(group, group_size, pre_skip + skip);
     DEBUG_PRINT("  skip = %hhu, branch = %hhu\n", skip, branch);
 
-
-    // Edge case! All rules are actually the same but with different prefix lengths
-    if ( default_rule == &group[group_size - 1] ) {
-        DEBUG_PRINT("  Full skip encountered, forcing leaf node\n");
-        create_subtrie(default_rule, 1, 0, node_ptr, default_rule);
-        return node_ptr;
-    }
 
     // Allocate memory for child nodes
     size_t num_children = 1 << branch;
@@ -247,12 +247,18 @@ int compare_rules(const void *a, const void *b) {
  *  input.
  */
 Rule *sort_rules(Rule *rules, size_t num_rules) {
+    DEBUG_PRINT("Sorting rules at %p\n", rules);
     Rule *sorted = malloc(num_rules * sizeof(Rule));
-    if (!sorted)
+    if (!sorted || !rules) {
+        DEBUG_PRINT("--Error: rules empty or couldn't malloc copy\n");
         return NULL;
+    }
 
+    DEBUG_PRINT("  Copying rules to new memory space\n");
     memcpy(sorted, rules, num_rules * sizeof(Rule));
+    DEBUG_PRINT("  Sorting with qsort\n");
     qsort(sorted, num_rules, sizeof(Rule), compare_rules);
+    DEBUG_PRINT("--Sorted\n");
 
     return sorted;
 }
@@ -291,6 +297,8 @@ Rule *compute_default(const Rule *group, size_t group_size, uint8_t pre_skip) {
         if (rule_match(&group[i], last_rule.prefix)) {
             DEBUG_PRINT("    Match. This is a default for the rest.\n");
             default_rule = (Rule *)&group[i];
+            DEBUG_PRINT("    Setting parent for all subsequent rules\n");
+            set_group_parent((Rule *)&group[i+1], group_size - i - 1, default_rule);
         } else {
             DEBUG_PRINT("    No match.\n");
             break;
@@ -299,6 +307,23 @@ Rule *compute_default(const Rule *group, size_t group_size, uint8_t pre_skip) {
 
     DEBUG_PRINT("--Done computing default: %p\n", default_rule);
     return default_rule;
+}
+
+int set_group_parent(Rule *group, size_t group_size, Rule *default_rule) {
+    DEBUG_PRINT("Setting parents for %zu rules at %p\n", group_size, group);
+    if (group_size == 0) {
+        DEBUG_PRINT("--Group is empty, returning null");
+        return -1;
+    }
+
+    for (size_t i = 0; i < group_size; i++) {
+        group[i].parent = default_rule;
+        DEBUG_PRINT("  Rule %zu at %p parent set to %p\n",
+                i, &group[i], default_rule);
+    }
+
+    DEBUG_PRINT("--Done setting parents\n");
+    return 0;
 }
 
 /** Check if an IP address matches a given rule.
@@ -423,10 +448,27 @@ uint32_t lookup_ip(ip_addr_t ip_addr, TrieNode *trie, int *access_count) {
     DEBUG_PRINT("  Checking against 0x%08X/%hhu (rule at %p)\n",
             match->prefix, match->prefix_len, match);
 
-    uint32_t out_iface = rule_match(match, ip_addr) ? match->out_iface : 0;
+    uint32_t out_iface;
 
-    DEBUG_PRINT("    %s\n", out_iface ? "Match" : "No match");
-    DEBUG_PRINT("--Done looking IP up: 0x%08X -> %d\n", ip_addr, out_iface);
+    while(1) {
+        (*access_count)++;
+        out_iface = rule_match(match, ip_addr) ? match->out_iface : 0;
+        if (out_iface != 0) {
+            DEBUG_PRINT("    Match found: %d\n", out_iface);
+            break;
+        } else if (match->parent != NULL) {
+            match = match->parent;
+            DEBUG_PRINT("    No match, checking parent (0x%08X/%hhu, at %p)\n",
+                    match->prefix, match->prefix_len, match);
+            continue;
+        } else {
+            DEBUG_PRINT("    No match\n");
+            break;
+        }
+    }
+
+    DEBUG_PRINT("--Done looking IP 0x%08X up in %u accesses: -> %d\n",
+            ip_addr, *access_count, out_iface);
 
     return out_iface;
 }
