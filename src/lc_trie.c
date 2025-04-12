@@ -141,7 +141,7 @@ uint8_t compute_skip(const Rule *group, size_t group_size, uint8_t pre_skip) {
 
     uint8_t min_len = (group[0].prefix_len < group[group_size-1].prefix_len) ?
         group[0].prefix_len : group[group_size - 1].prefix_len;
-    DEBUG_PRINT("  Smallest prefix length is %zu\n", min_len);
+    DEBUG_PRINT("  Smallest prefix length is %hhu\n", min_len);
 
     if (group_size == 1) {
         DEBUG_PRINT("--Group has 1 member. Skip is prefix_len - pre_skip.\n");
