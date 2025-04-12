@@ -40,11 +40,6 @@ TrieNode *create_subtrie(Rule *group, size_t group_size, uint8_t pre_skip,
     DEBUG_PRINT("Creating subtrie with %zu rules at %p\n", group_size, group);
     DEBUG_PRINT("  Pre-skip is %hhu, default is %p\n", pre_skip, default_rule);
 
-    // Compute skip and branch values
-    uint8_t skip = compute_skip(group, group_size, pre_skip);
-    uint8_t branch = compute_branch(group, group_size, pre_skip + skip);
-    DEBUG_PRINT("  skip = %hhu, branch = %hhu\n", skip, branch);
-
     // Update default_rule if a suitable one is found
     Rule *new_default = compute_default(group, group_size, pre_skip);
     if (new_default) {
@@ -52,14 +47,26 @@ TrieNode *create_subtrie(Rule *group, size_t group_size, uint8_t pre_skip,
         DEBUG_PRINT("    0x%08X/%hhu -> %d\n", new_default->prefix,
                 new_default->prefix_len, new_default->out_iface);
         default_rule = new_default;
+
+        // Virtually remove the default rule from the group
+        // This looks so wrong...
+        size_t default_count = (size_t)(new_default - group) / sizeof(Rule) + 1;
+        group_size -= default_count;
+        group = new_default + 1;
+
+        // Edge case! All rules are single children
+        if ( default_rule == &group[group_size - 1] ) {
+            DEBUG_PRINT("  Single-child chain encountered, forcing leaf node\n");
+            create_subtrie(default_rule, 1, 0, node_ptr, default_rule);
+            return node_ptr;
+        }
     }
 
-    // Edge case! All rules are single children
-    if ( default_rule == &group[group_size - 1] ) {
-        DEBUG_PRINT("  Single-child chain encountered, forcing leaf node\n");
-        create_subtrie(default_rule, 1, 0, node_ptr, default_rule);
-        return node_ptr;
-    }
+    // Compute skip and branch values
+    uint8_t skip = compute_skip(group, group_size, pre_skip);
+    uint8_t branch = compute_branch(group, group_size, pre_skip + skip);
+    DEBUG_PRINT("  skip = %hhu, branch = %hhu\n", skip, branch);
+
 
     // Allocate memory for child nodes
     size_t num_children = 1 << branch;
@@ -131,6 +138,11 @@ uint8_t compute_skip(const Rule *group, size_t group_size, uint8_t pre_skip) {
         DEBUG_PRINT("--Group is empty. Skip is 0.\n");
         return 0;
     }
+
+    uint8_t min_len = (group[0].prefix_len < group[group_size-1].prefix_len) ?
+        group[0].prefix_len : group[group_size - 1].prefix_len;
+    DEBUG_PRINT("  Smallest prefix length is %hhu\n", min_len);
+
     if (group_size == 1) {
         DEBUG_PRINT("--Group has 1 member. Skip is prefix_len - pre_skip.\n");
         return group[0].prefix_len - pre_skip;
@@ -141,7 +153,7 @@ uint8_t compute_skip(const Rule *group, size_t group_size, uint8_t pre_skip) {
     DEBUG_PRINT("  First IP: 0x%08X; Last IP: 0x%08X\n", first, last);
 
     uint8_t skip = pre_skip;
-    while (skip <= IP_ADDRESS_LENGTH && prefix_match(first, last, skip)) {
+    while (skip <= min_len && prefix_match(first, last, skip)) {
         skip++;
     } // At this point, skip is one too big
     skip--;
