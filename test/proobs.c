@@ -1,13 +1,9 @@
 #include "../src/lc_trie.h"
+#include "../src/utils.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
-
-#include "../src/lc_trie.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdbool.h>
 
 // ==== Macros ====
 #define TEST_FAIL(format, ...) \
@@ -35,6 +31,7 @@ TrieNode *create_internal(uint8_t branch, uint8_t skip, TrieNode **children);
 void print_node(const TrieNode *node);
 int eq_nodes(const TrieNode *a, const TrieNode *b);
 
+void print_bits(uint32_t value);
 void sprint_bits(char *dest, int value, int bits, int nibble_offset);
 void print_trie(const TrieNode *trie, char *tree_prefix, char *match_prefix,
         int pre_skip);
@@ -45,6 +42,78 @@ TrieNode *build_test_trie2();
 
 
 // ==== Test functions ====
+
+// =============================================================== //
+// Utils tests                                                     //
+// =============================================================== //
+
+// Wrapper function for extract_lsb and extract_msb
+int _test_extract_bits(uint32_t value, int start, int count,
+        uint32_t expected, bool msb) {
+
+    char *type = msb ? "MSB at 0" : "LSB at 0";
+
+    uint32_t result = msb ?
+        extract_msb(value, start, count) : extract_lsb(value, start, count);
+
+    printf("Extract %d, start at %d from 0x%X (%s): 0x%X (expected 0x%X)\n",
+            count, start, value, type, result, expected);
+
+    // If A-OK, don't print anything else
+    if (result != expected) {
+        printf("Input:");
+        print_bits(value);
+        printf("Result | Expected:\n");
+        print_bits(result);
+        print_bits(expected);
+        TEST_FAIL("Result doesn't match\n");
+    }
+
+    return 0;
+}
+
+// Test the extract_lsb function
+int test_extract_lsb() {
+    return _test_extract_bits(0x87654321, 8, 18, 0x36543, false);
+}
+
+// Test collection for extract_msb
+int test_extract_msb() {
+    printf("=== Testing extract_msb ===\n");
+    int fails = 0;
+
+    // Test 1: Extract first octet (MSB)
+    printf("\n--- Test Case 1: First octet extraction ---\n");
+    fails += _test_extract_bits(0xC0A80101, 0, 8, 0xC0, true);
+
+    // Test 2: Extract second octet
+    printf("\n--- Test Case 2: Second octet extraction ---\n");
+    fails += _test_extract_bits(0xC0A80101, 8, 8, 0xA8, true);
+
+    // Test 3: Extract 4 bits from position 4
+    printf("\n--- Test Case 3: 4-bit extraction from position 4 ---\n");
+    fails += _test_extract_bits(0xC0A80101, 4, 4, 0x0, true);
+
+    // Test 4: Extract 16 bits from start
+    printf("\n--- Test Case 4: 16-bit extraction from start ---\n");
+    fails += _test_extract_bits(0xC0A80101, 0, 16, 0xC0A8, true);
+
+    // Test 5: Edge case (0 bits)
+    printf("\n--- Test Case 5: Zero-bit extraction ---\n");
+    fails += _test_extract_bits(0xC0A80101, 0, 0, 0, true);
+
+    // Test 6: Edge case (0 bits)
+    printf("\n--- Test Case 6: 17-bit extraction from position 7 ---\n");
+    fails += _test_extract_bits(0x87654321, 7, 17, 0x16543, true);
+
+    TEST_REPORT("extract_msb", fails);
+
+    return fails;
+}
+
+// =============================================================== //
+// LC-Trie tests                                                   //
+// =============================================================== //
 
 // Test wrapper for compute_skip
 int _test_compute_skip(Rule *rules, size_t num_rules, uint8_t pre_skip,
@@ -779,6 +848,17 @@ void print_trie(const TrieNode *trie, char *tree_prefix, char *match_prefix,
     }
 }
 
+void print_bits(uint32_t value) {
+    printf("0b ");
+    for (int i = 31; i >= 0; i--) {
+        printf("%d", (value >> i) & 1);
+        if (i % 4 == 0) {
+            printf(" ");
+        }
+    }
+    printf("\n");
+}
+
 void sprint_bits(char *dest, int value, int bits, int nibble_offset) {
     /* memcpy(dest, "", 1); */
     for (int i=0; i < bits; i++) {
@@ -1032,20 +1112,35 @@ TrieNode *create_internal(uint8_t branch, uint8_t skip, TrieNode **children)
 
 // Run all tests
 int main() {
-    printf("=== LC-Trie Function Test Suite ===\n");
     int fails = 0;
 
-    // Run all test functions
-    fails += test_compute_skip();
-    fails += test_compute_branch();
-    fails += test_sort_rules();
-    fails += test_compute_default();
-    fails += test_rule_match();
-    fails += test_create_trie();
-    fails += test_count_nodes();
-    fails += test_lookup();
+    printf("\n==x=x== Utils Test Suite ==x=x==\n");
+    int fails_utils = 0;
 
+    fails_utils += test_extract_lsb();
+    fails_utils += test_extract_msb();
+
+    TEST_REPORT("Utils", fails_utils);
+    fails += fails_utils;
+
+    printf("\n\n==x=x== LC-Trie Function Test Suite ==x=x==\n");
+    int fails_lc_trie = 0;
+
+    fails_lc_trie += test_compute_skip();
+    fails_lc_trie += test_compute_branch();
+    fails_lc_trie += test_sort_rules();
+    fails_lc_trie += test_compute_default();
+    fails_lc_trie += test_rule_match();
+    fails_lc_trie += test_create_trie();
+    fails_lc_trie += test_count_nodes();
+    fails_lc_trie += test_lookup();
+
+    TEST_REPORT("LC-Trie", fails_lc_trie);
+    fails += fails_lc_trie;
+
+    printf("\n\n=x=x=x= Global report =x=x=x=");
     TEST_REPORT("ALL", fails);
+    printf("\n");
 
     return fails;
 }
