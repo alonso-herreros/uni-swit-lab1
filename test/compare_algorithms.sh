@@ -167,12 +167,16 @@ for i in "${!FIBS[@]}"; do
     fi
 
     echo ""
+
+    # Clean up temporary files
+    if [ $KEEP -ne 1 ]; then
+        rm "$OUTPUT_FILE_1" "$OUTPUT_FILE_2" "$LOOKUPS_FILE_1" "$LOOKUPS_FILE_2"
+        rm -r "$OUT_DIR"
+    fi
 done
 
-
-# Clean up temporary files
-if [ ! $KEEP ]; then
-    rm "$OUTPUT_FILE_1" "$OUTPUT_FILE_2" "$LOOKUPS_FILE_1" "$LOOKUPS_FILE_2"
+if [ "$KEEP" -ne 1 -a -n "$OUT_DIR_BASE" ]; then
+    rm -r "$OUT_DIR_BASE"
 fi
 
 echo "Exiting with $fails failures"
