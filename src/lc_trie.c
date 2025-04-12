@@ -53,13 +53,6 @@ TrieNode *create_subtrie(Rule *group, size_t group_size, uint8_t pre_skip,
         size_t default_count = (size_t)(new_default - group) / sizeof(Rule) + 1;
         group_size -= default_count;
         group = new_default + 1;
-
-        // Edge case! All rules are single children
-        if ( default_rule == &group[group_size - 1] ) {
-            DEBUG_PRINT("  Single-child chain encountered, forcing leaf node\n");
-            create_subtrie(default_rule, 1, 0, node_ptr, default_rule);
-            return node_ptr;
-        }
     }
 
     // Compute skip and branch values
@@ -67,6 +60,12 @@ TrieNode *create_subtrie(Rule *group, size_t group_size, uint8_t pre_skip,
     uint8_t branch = compute_branch(group, group_size, pre_skip + skip);
     DEBUG_PRINT("  skip = %hhu, branch = %hhu\n", skip, branch);
 
+    // Edge case! All rules are single children
+    if ( default_rule == &group[group_size - 1] || branch == 0) {
+        DEBUG_PRINT("  Single-child chain encountered, forcing leaf node\n");
+        create_subtrie(default_rule, 1, 0, node_ptr, default_rule);
+        return node_ptr;
+    }
 
     // Allocate memory for child nodes
     size_t num_children = 1 << branch;
