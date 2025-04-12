@@ -50,7 +50,8 @@ TrieNode *create_subtrie(Rule *group, size_t group_size, uint8_t pre_skip,
 
         // Virtually remove the default rule from the group
         // This looks so wrong...
-        group_size -= (size_t)(default_rule - group)/sizeof(Rule) + 1;
+        size_t default_count = (size_t)(new_default - group) / sizeof(Rule) + 1;
+        group_size -= default_count;
         group = new_default + 1;
     }
 
