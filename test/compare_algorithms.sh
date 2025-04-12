@@ -21,8 +21,15 @@ function Help() {
 # ==== Specifics ====
 
 function run_algorithms() {
-    OUTPUT_FILE="$INPUT_PACKET_FILE.out"
     echo "Running $SEARCH_ALGO_1 and $SEARCH_ALGO_2 on $FIB with input file $INPUT_PACKET_FILE"
+
+    OUTPUT_FILE="$INPUT_PACKET_FILE.out"
+
+    TMP_FILE="" # Avoid overwriting files if we notice
+    if [ -e "$OUTPUT_FILE" ]; then
+        TMP_FILE="$INPUT_PACKET_FILE.tmp"
+        mv "$OUTPUT_FILE" "$TMP_FILE"
+    fi
 
     # Check if the search algorithms are executable
     if [ ! -x "$SEARCH_ALGO_1" ]; then
@@ -48,6 +55,10 @@ function run_algorithms() {
         exit 1
     fi
     mv "$OUTPUT_FILE" "$OUTPUT_FILE_2"
+
+    if [ -e "$TMP_FILE" ]; then
+        mv "$TMP_FILE" "$OUTPUT_FILE"
+    fi
 }
 
 function compare_lookups() {
