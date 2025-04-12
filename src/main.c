@@ -121,17 +121,15 @@ int main(int argc, char *argv[]) {
 }
 
 TrieNode *read_trie() {
-    DEBUG_PRINT("Read trie enter\n");
+    DEBUG_PRINT("Reading trie\n");
     int rule_count = 0;
     Rule *rules = read_rules(&rule_count);
-    DEBUG_PRINT("Read rules done (%d rules)\n", rule_count);
 
     Rule *sorted = sort_rules(rules, rule_count);
     free(rules);
-    DEBUG_PRINT("Sort rules done\n");
 
     TrieNode *root = create_trie(sorted, rule_count);
-    DEBUG_PRINT("Create trie done, root at %p\n", root);
+    DEBUG_PRINT("  Create trie done, root at %p\n", root);
     // Since create_trie doesn't create a copy of the rules yet
     // free(sorted);
     // DEBUG_PRINT("Free rules done\n");
@@ -140,6 +138,7 @@ TrieNode *read_trie() {
 }
 
 Rule *read_rules(int *rule_count) {
+    DEBUG_PRINT("Reading rules\n");
     // Min chars per line: 11
     // Max chars per line: 24
     int status;
@@ -148,7 +147,7 @@ Rule *read_rules(int *rule_count) {
     size_t capacity = 2;
     size_t size = 0;
     Rule* rules = malloc(sizeof(Rule) * capacity);
-    DEBUG_PRINT("Malloc rules done, capacity %zu\n", capacity);
+    DEBUG_PRINT("  Malloc rules done, capacity %zu\n", capacity);
 
     ip_addr_t addr;
     int prefix_len;
@@ -159,12 +158,12 @@ Rule *read_rules(int *rule_count) {
             free(rules);
             return NULL;
         }
-        DEBUG_PRINT("Read rule %zu: %u/%d %d\n", size, addr, prefix_len, out_iface);
+        DEBUG_PRINT("  Read rule %zu: 0x%08X/%d %d\n", size, addr, prefix_len, out_iface);
 
         if (size == capacity) { // Next element would overflow
             capacity *= 2;
+            DEBUG_PRINT("  Reallocating rules, new capacity %zu\n", capacity);
             rules = realloc(rules, sizeof(Rule) * capacity);
-            DEBUG_PRINT("Realloc rules done, new capacity %zu\n", capacity);
         }
 
         rules[size].prefix = addr;
@@ -179,6 +178,7 @@ Rule *read_rules(int *rule_count) {
     rules = realloc(rules, sizeof(Rule) * size);
     *rule_count = size;
 
+    DEBUG_PRINT("--Done reading %d rules\n", *rule_count);
     return rules;
 }
 
