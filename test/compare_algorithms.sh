@@ -162,10 +162,11 @@ for i in "${!FIBS[@]}"; do
 
     # Compare the output files
     compare_lookups
-
     if [ $? -ne 0 ]; then
         fails+=1
     fi
+
+    echo ""
 done
 
 
