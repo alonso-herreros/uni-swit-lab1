@@ -47,6 +47,11 @@ TrieNode *create_subtrie(Rule *group, size_t group_size, uint8_t pre_skip,
         DEBUG_PRINT("    0x%08X/%hhu -> %d\n", new_default->prefix,
                 new_default->prefix_len, new_default->out_iface);
         default_rule = new_default;
+
+        // Virtually remove the default rule from the group
+        // This looks so wrong...
+        group_size -= (size_t)(default_rule - group)/sizeof(Rule) + 1;
+        group = new_default + 1;
     }
 
     // Compute skip and branch values
