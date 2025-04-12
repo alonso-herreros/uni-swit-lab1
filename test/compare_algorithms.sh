@@ -147,7 +147,7 @@ for i in "${!FIBS[@]}"; do
     if [ -n "$OUT_DIR_BASE" ]; then
         OUT_DIR="$OUT_DIR_BASE/test$i"
     else
-        OUT_DIR="$INPUT_PACKET_FILE.tests"
+        OUT_DIR="$INPUT_PACKET_FILE.test-out"
     fi
 
     mkdir -p "$OUT_DIR"
