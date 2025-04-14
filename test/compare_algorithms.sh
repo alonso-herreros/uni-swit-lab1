@@ -31,17 +31,6 @@ function run_algorithms() {
         mv "$OUTPUT_FILE" "$TMP_FILE"
     fi
 
-    # Check if the search algorithms are executable
-    if [ ! -x "$SEARCH_ALGO_1" ]; then
-        echo "Error: $SEARCH_ALGO_1 is not executable"
-        exit 1
-    fi
-
-    if [ ! -x "$SEARCH_ALGO_2" ]; then
-        echo "Error: $SEARCH_ALGO_2 is not executable"
-        exit 1
-    fi
-
     $SEARCH_ALGO_1 "$FIB" "$INPUT_PACKET_FILE" >/dev/null
     if [ $? -ne 0 ]; then
         echo "Error: $SEARCH_ALGO_1 failed"
@@ -142,6 +131,17 @@ INPUT_PACKET_FILES=(  )
 args "$0" "$@"
 
 fails=0
+
+# Check if the search algorithms are executable
+if [ ! -x "$SEARCH_ALGO_1" ]; then
+    echo "Error: $SEARCH_ALGO_1 is not executable"
+    exit 1
+fi
+
+if [ ! -x "$SEARCH_ALGO_2" ]; then
+    echo "Error: $SEARCH_ALGO_2 is not executable"
+    exit 1
+fi
 
 FIB=""
 INPUT_PACKET_FILE=""
