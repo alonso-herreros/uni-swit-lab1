@@ -110,9 +110,11 @@ int main(int argc, char *argv[]) {
     printSummary(node_count, i, avg_access_count, avg_search_time);
     DEBUG_PRINT("Summary done\n");
 
-    DEBUG_PRINT("Clean up start\n");
     // Clean up
+    DEBUG_PRINT("Clean up start\n");
     freeIO();
+    // Free the rules because it isn't done anywhere else
+    free_trie_rules(root);
     free_trie(root);
 
     DEBUG_PRINT("Clean up done\n");

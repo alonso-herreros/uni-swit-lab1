@@ -90,6 +90,13 @@ TrieNode *create_trie(Rule *rules, size_t num_rules);
  */
 void free_trie(TrieNode *trie);
 
+/** Free the memory allocated for the LC-Trie's rules. Available in case the
+ *  caller lost the pointer.
+ *
+ * @param trie Pointer to the root node of the LC-Trie.
+ */
+void free_trie_rules(TrieNode *trie);
+
 /** Count the total number of nodes in a given LC-Trie.
  *
  * @param trie Pointer to the root node of the LC-Trie.

@@ -507,6 +507,37 @@ void free_trie(TrieNode *root) {
     DEBUG_PRINT("--Done freeing tree\n");
 }
 
+void free_trie_rules(TrieNode *root) {
+    DEBUG_PRINT("Freeing rules for trie at %p\n", root);
+    if (root == NULL) {
+        DEBUG_PRINT("--Nothing to free\n");
+        return;
+    }
+
+    // Traverse to a leaf
+    DEBUG_PRINT("  Finding a leaf\n");
+    TrieNode *current = root;
+    while (current->branch != 0) {
+        current = (TrieNode *)current->pointer;
+    }
+    DEBUG_PRINT("  Found leaf at %p\n", current);
+
+    // Traverse to the parent of all rules through the reverse tree
+    Rule *rule = (Rule *)current->pointer;
+    DEBUG_PRINT("  Finding deepest parent for rule at %p: 0x%08X/%hhu\n",
+            rule, rule->prefix, rule->prefix_len);
+    while (rule->parent != NULL) {
+        DEBUG_PRINT("    Found parent at %p: 0x%08X/%hhu\n",
+                rule->parent, rule->parent->prefix, rule->parent->prefix_len);
+        rule = rule->parent;
+    }
+
+    DEBUG_PRINT("  Freeing rules at %p\n", rule);
+    free(rule); // Free the first rule
+
+    DEBUG_PRINT("--Done freeing rules\n");
+}
+
 // ---- Mock implementations for testing ----
 
 #ifdef MOCK
